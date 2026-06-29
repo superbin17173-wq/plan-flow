@@ -1,0 +1,297 @@
+// 日历特定样式
+@use './variables.scss' as *;
+
+// 月视图容器
+.month-view {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--calendar-cell-gap);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+// 月视图头部（星期）
+.month-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--calendar-header-bg);
+  text-align: center;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+// 日单元格
+.day-cell {
+  min-height: 80px;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background: var(--bg-hover);
+  }
+
+  // 今天
+  &.today {
+    background: var(--calendar-today-bg);
+    .day-number {
+      background: var(--color-work);
+      color: white;
+      border-radius: var(--radius-full);
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  // 选中
+  &.selected {
+    background: var(--calendar-selected-bg);
+    border-color: var(--color-work);
+  }
+
+  // 非当前月
+  &.other-month {
+    opacity: 0.4;
+  }
+}
+
+// 日期数字
+.day-number {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+// 任务列表（日格内）
+.day-tasks {
+  margin-top: var(--spacing-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// 任务标签
+.task-chip {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+
+  &.completed {
+    opacity: 0.5;
+    text-decoration: line-through;
+  }
+
+  // 优先级
+  &.priority-high {
+    border-left: 3px solid var(--color-priority-high);
+  }
+
+  &.priority-low {
+    opacity: 0.5;
+  }
+}
+
+// 更多任务指示
+.more-tasks {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 2px 4px;
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+// 周视图
+.week-view {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.week-header {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--calendar-header-bg);
+
+  .time-column {
+    width: 60px;
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    text-align: center;
+  }
+
+  .day-column-header {
+    flex: 1;
+    padding: var(--spacing-sm);
+    text-align: center;
+    font-weight: 500;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+
+    &.today {
+      background: var(--calendar-today-bg);
+      color: var(--color-work);
+    }
+  }
+}
+
+.week-body {
+  display: flex;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+.time-axis {
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+
+  .hour-slot {
+    height: var(--calendar-hour-height);
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    padding: var(--spacing-xs);
+    text-align: center;
+  }
+}
+
+.week-columns {
+  flex: 1;
+  display: flex;
+
+  .day-column {
+    flex: 1;
+    border-left: 1px solid var(--border-color);
+    position: relative;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+
+    // 小时格子背景线
+    .hour-grid {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+
+      .hour-line {
+        height: var(--calendar-hour-height);
+        border-bottom: 1px solid var(--border-color);
+      }
+    }
+  }
+}
+
+// 日视图
+.day-view {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.day-header {
+  padding: var(--spacing-md);
+  background: var(--calendar-header-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.day-body {
+  display: flex;
+  overflow-y: auto;
+  max-height: 70vh;
+  position: relative;
+}
+
+// 时间轴上的任务块
+.time-task-block {
+  position: absolute;
+  left: 70px;
+  right: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  overflow: hidden;
+  cursor: grab;
+  transition: all var(--transition-fast);
+  z-index: 10;
+
+  &:hover {
+    z-index: 20;
+    transform: scale(1.02);
+    box-shadow: var(--shadow-md);
+  }
+
+  &.dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+    z-index: 100;
+  }
+
+  // 优先级标记
+  &.priority-high {
+    border-left: 4px solid var(--color-priority-high);
+  }
+
+  &.priority-low {
+    opacity: 0.6;
+  }
+
+  &.completed {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+
+  // 重叠任务偏移
+  &.overlap {
+    left: calc(70px + 10px * var(--overlap-index, 0));
+    right: calc(var(--spacing-sm) + 10px * var(--overlap-index, 0));
+  }
+
+  .task-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .task-time {
+    font-size: var(--font-size-xs);
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+}
