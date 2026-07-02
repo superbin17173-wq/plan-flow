@@ -5,11 +5,13 @@ import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
 import { getTaskPosition } from '../../utils/timeUtils'
+import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
 import TaskBlock from './TaskBlock.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
+const now = useNow()
 
 // 周日期列表
 const weekDates = computed(() => {
@@ -65,13 +67,22 @@ function handleColumnClick(date: Date) {
 
 // 点击空白时间创建任务
 function handleTimeSlotClick(date: Date, hour: number, e: MouseEvent) {
+  if (isPastHour(formatDate(date), hour, now.value)) return
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const y = e.clientY - rect.top
   const minuteOffset = Math.floor((y / 60) * 60)
   const startHour = Math.min(hour + Math.floor(minuteOffset / 60), 23)
   const startTime = `${String(startHour).padStart(2, '0')}:${String(minuteOffset % 60).padStart(2, '0')}`
   const endTime = `${String(Math.min(startHour + 1, 23)).padStart(2, '0')}:${String(minuteOffset % 60).padStart(2, '0')}`
-  uiStore.openTaskForm(undefined, formatDate(date))
+  uiStore.openTaskForm(undefined, formatDate(date), startTime)
+}
+
+function hourIsPast(date: Date, hour: number): boolean {
+  return isPastHour(formatDate(date), hour, now.value)
+}
+
+function taskIsPast(date: Date, task: any): boolean {
+  return isPastTime(formatDate(date), task.endTime, now.value)
 }
 
 // 拖拽处理
@@ -132,6 +143,7 @@ function endDrag() {
               v-for="hour in hours"
               :key="hour"
               class="hour-slot"
+              :class="{ past: hourIsPast(date, hour) }"
               @click.stop="handleTimeSlotClick(date, hour, $event)"
             ></div>
           </div>
@@ -143,6 +155,7 @@ function endDrag() {
             :task="task"
             :hour-height="60"
             :is-dragging="draggingTask === task.id"
+            :is-past="taskIsPast(date, task)"
             @drag-start="startDrag"
             @drag-end="endDrag"
             @click.stop="uiStore.openTaskCard(task.id)"
@@ -170,6 +183,7 @@ function endDrag() {
 
 .time-header {
   width: 60px;
+  flex-shrink: 0;
   padding: 12px 8px;
   font-size: 12px;
   color: var(--text-tertiary);
@@ -222,19 +236,25 @@ function endDrag() {
 
 .time-axis {
   width: 60px;
+  flex-shrink: 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
 }
 
 .hour-label {
   height: 60px;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 4px;
-  font-size: 11px;
-  color: var(--text-tertiary);
+  padding-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 .week-columns {
@@ -262,34 +282,33 @@ function endDrag() {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .hour-slot {
   height: 60px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   pointer-events: auto;
+  transition: background 0.2s;
+  box-sizing: border-box;
 
   &:hover {
     background: rgba(129, 201, 216, 0.1);
   }
+
+  &.past {
+    background: rgba(0, 0, 0, 0.04);
+    cursor: not-allowed;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
 }
 
 @media (max-width: 768px) {
-  .time-header, .time-axis {
-    width: 40px;
-  }
-
-  .hour-label {
-    font-size: 10px;
-    height: 50px;
-  }
-
-  .hour-slot {
-    height: 50px;
-  }
-
-  .day-column {
-    min-height: 1200px;
-  }
+  // 保持与 PC 一致的尺寸和字号，仅在此断点做微调按需扩展
 }
 </style>

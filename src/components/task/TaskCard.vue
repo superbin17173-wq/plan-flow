@@ -5,9 +5,14 @@ import type { Task } from '../../types'
 import { getCategoryById } from '../../types/category'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
+import { useSettingStore } from '../../stores/settingStore'
+import { useHealthStore } from '../../stores/healthStore'
+import { calcTaskCalories, currentWeight } from '../../utils/calorie'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
+const settingStore = useSettingStore()
+const healthStore = useHealthStore()
 
 // 当前任务
 const task = computed(() => {
@@ -43,6 +48,26 @@ const remindText = computed(() => {
   return `提前 ${task.value.remindAt} 分钟提醒`
 })
 
+// 训练摘要
+const workoutSummary = computed(() => {
+  const w = task.value?.workout
+  if (!w || w.length === 0) return null
+  let volume = 0
+  let setCount = 0
+  for (const ex of w) {
+    for (const s of ex.sets) {
+      setCount++
+      if (s.weight != null && s.reps != null) volume += s.weight * s.reps
+    }
+  }
+  const latestM = [...healthStore.measurements]
+    .filter(m => m.weight && m.weight > 0)
+    .sort((a, b) => b.date.localeCompare(a.date))[0]
+  const weight = currentWeight(settingStore.settings, latestM)
+  const kcal = task.value ? calcTaskCalories(task.value, weight) : 0
+  return { exCount: w.length, setCount, volume: Math.round(volume), kcal, weight }
+})
+
 // 完成状态切换
 async function handleToggleComplete() {
   if (task.value) {
@@ -53,8 +78,9 @@ async function handleToggleComplete() {
 // 编辑
 function handleEdit() {
   if (task.value) {
-    uiStore.openTaskForm(task.value.id)
+    const taskId = task.value.id
     uiStore.closeTaskCard()
+    uiStore.openTaskForm(taskId)
   }
 }
 
@@ -128,6 +154,34 @@ const dateDisplay = computed(() => {
                   <span class="priority-tag" :class="task.priority">
                     {{ task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低' }}
                   </span>
+                </div>
+              </div>
+
+              <!-- 训练动作(健身分类) -->
+              <div v-if="task.workout && task.workout.length > 0" class="card-section workout-section">
+                <div class="section-label">
+                  💪 训练详情
+                  <span v-if="workoutSummary" class="workout-badge">
+                    {{ workoutSummary.exCount }} 动作 · {{ workoutSummary.setCount }} 组<span v-if="workoutSummary.volume > 0"> · {{ workoutSummary.volume }}kg</span>
+                  </span>
+                </div>
+                <div v-if="workoutSummary && workoutSummary.kcal > 0" class="kcal-row">
+                  <span>🔥 预估消耗</span>
+                  <b>{{ workoutSummary.kcal }} kcal</b>
+                  <span class="kcal-tip">按体重 {{ workoutSummary.weight }}kg × 动作 MET 估算</span>
+                </div>
+                <div class="workout-list">
+                  <div v-for="ex in task.workout" :key="ex.id" class="ex-item">
+                    <div class="ex-name-row">
+                      <span class="ex-tag">{{ ex.muscleGroup }}</span>
+                      <span class="ex-name">{{ ex.name }}</span>
+                    </div>
+                    <div class="ex-sets">
+                      <span v-for="(s, i) in ex.sets" :key="i" class="set-chip">
+                        {{ s.weight != null ? s.weight + 'kg×' + s.reps : s.reps + ' 次' }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -270,6 +324,101 @@ const dateDisplay = computed(() => {
     background: rgba(168, 168, 168, 0.2);
     color: #A8A8A8;
   }
+}
+
+.workout-section .section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.workout-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(242, 123, 123, 0.15);
+  color: #d85555;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.kcal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, rgba(245, 169, 98, 0.16), rgba(231, 76, 60, 0.10));
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+
+  b {
+    color: #e67e22;
+    font-size: 16px;
+    font-family: monospace;
+  }
+
+  .kcal-tip {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    margin-left: auto;
+  }
+}
+
+.workout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ex-item {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ex-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.ex-tag {
+  background: var(--color-work);
+  color: white;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.ex-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.ex-sets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding-left: 4px;
+}
+
+.set-chip {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
 }
 
 .card-footer {

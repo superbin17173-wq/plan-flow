@@ -25,6 +25,15 @@ export const useSettingStore = defineStore('setting', () => {
     if (key === 'theme') applyTheme()
   }
 
+  // 批量更新
+  async function updateSettings(partial: Partial<Settings>) {
+    for (const [k, v] of Object.entries(partial)) {
+      (settings.value as any)[k] = v
+      await dbUpdateSetting(k as keyof Settings, v as any)
+    }
+    if ('theme' in partial) applyTheme()
+  }
+
   // 应用主题
   function applyTheme() {
     const theme = settings.value.theme
@@ -59,6 +68,7 @@ export const useSettingStore = defineStore('setting', () => {
     loaded,
     loadSettings,
     updateSetting,
+    updateSettings,
     applyTheme,
     toggleTheme,
     isDark,

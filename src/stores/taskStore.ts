@@ -63,6 +63,7 @@ export const useTaskStore = defineStore('task', () => {
       isCompleted: false,
       recurrence: formData.recurrence,
       remindAt: formData.remindAt,
+      workout: formData.workout,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -111,6 +112,7 @@ export const useTaskStore = defineStore('task', () => {
     if (formData.endTime !== undefined) task.endTime = formData.endTime
     if (formData.recurrence !== undefined) task.recurrence = formData.recurrence
     if (formData.remindAt !== undefined) task.remindAt = formData.remindAt
+    if (formData.workout !== undefined) task.workout = formData.workout
     task.updatedAt = Date.now()
 
     await dbUpdateTask(task)
@@ -135,6 +137,33 @@ export const useTaskStore = defineStore('task', () => {
   async function removeTask(id: string): Promise<void> {
     await dbDeleteTask(id)
     tasks.value = tasks.value.filter(t => t.id !== id)
+  }
+
+  // 批量创建任务(用于 Excel 导入 / 批量生成)
+  async function createTasksBulk(items: TaskFormData[]): Promise<number> {
+    const created: Task[] = []
+    for (const formData of items) {
+      const task: Task = {
+        id: uuidv4(),
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        color: getCategoryColor(formData.category),
+        isCompleted: false,
+        recurrence: formData.recurrence,
+        remindAt: formData.remindAt,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+      await dbAddTask(task)
+      created.push(task)
+    }
+    tasks.value.push(...created)
+    return created.length
   }
 
   // 拖拽更新时间
@@ -213,6 +242,7 @@ export const useTaskStore = defineStore('task', () => {
     getTasksInRange,
     getIncompleteCount,
     createTask,
+    createTasksBulk,
     editTask,
     toggleComplete,
     removeTask,

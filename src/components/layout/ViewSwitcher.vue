@@ -4,12 +4,13 @@ import { useUiStore } from '../../stores/uiStore'
 const uiStore = useUiStore()
 
 const views = [
+  { key: 'year', label: '年' },
   { key: 'month', label: '月' },
   { key: 'week', label: '周' },
   { key: 'day', label: '日' },
 ]
 
-function setView(view: 'month' | 'week' | 'day') {
+function setView(view: 'month' | 'week' | 'day' | 'year') {
   uiStore.setView(view)
 }
 </script>

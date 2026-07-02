@@ -5,11 +5,13 @@ import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
 import { timeToMinutes, minutesToTime, getTaskPosition, getConflictingTasks } from '../../utils/timeUtils'
+import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
 import TaskBlock from './TaskBlock.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
+const now = useNow()
 
 // 当天任务
 const dayTasks = computed(() => {
@@ -31,13 +33,24 @@ function formatHour(hour: number): string {
 
 // 点击时间槽创建任务
 function handleTimeSlotClick(hour: number, e: MouseEvent) {
+  if (isPastHour(uiStore.selectedDate, hour, now.value)) return
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const y = e.clientY - rect.top
   const minuteOffset = Math.floor((y / 60) * 60)
   const startMinutes = hour * 60 + minuteOffset
   const startTime = minutesToTime(startMinutes)
   const endTime = minutesToTime(Math.min(startMinutes + 60, 1440))
-  uiStore.openTaskForm(undefined, uiStore.selectedDate)
+  uiStore.openTaskForm(undefined, uiStore.selectedDate, startTime)
+}
+
+// 判断某小时是否已过去
+function hourIsPast(hour: number): boolean {
+  return isPastHour(uiStore.selectedDate, hour, now.value)
+}
+
+// 判断某任务是否已结束
+function taskIsPast(task: any): boolean {
+  return isPastTime(uiStore.selectedDate, task.endTime, now.value)
 }
 
 // 计算任务重叠层级
@@ -122,7 +135,12 @@ function getRelativeDate(): string {
     <div class="day-body">
       <!-- 时间轴 -->
       <div class="time-axis">
-        <div v-for="hour in hours" :key="hour" class="hour-label">
+        <div
+          v-for="hour in hours"
+          :key="hour"
+          class="hour-label"
+          :class="{ past: hourIsPast(hour) }"
+        >
           {{ formatHour(hour) }}
         </div>
       </div>
@@ -135,6 +153,7 @@ function getRelativeDate(): string {
             v-for="hour in hours"
             :key="hour"
             class="hour-slot"
+            :class="{ past: hourIsPast(hour) }"
             @click="handleTimeSlotClick(hour, $event)"
           ></div>
         </div>
@@ -147,6 +166,7 @@ function getRelativeDate(): string {
           :hour-height="60"
           :overlap-index="getOverlapIndex(task)"
           :is-dragging="draggingTask === task.id"
+          :is-past="taskIsPast(task)"
           @drag-start="handleDragStart"
           @drag-end="handleDragEnd"
           @click="uiStore.openTaskCard(task.id)"
@@ -162,7 +182,8 @@ function getRelativeDate(): string {
   flex-direction: column;
   background: var(--bg-secondary);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 100px);
 }
 
 .day-header {
@@ -241,26 +262,36 @@ function getRelativeDate(): string {
 
 .day-body {
   display: flex;
-  overflow-y: auto;
-  max-height: calc(100vh - 200px);
   position: relative;
 }
 
 .time-axis {
-  width: 70px;
+  width: 60px;
+  flex-shrink: 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
 }
 
 .hour-label {
   height: 60px;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 4px;
-  font-size: 12px;
-  color: var(--text-tertiary);
+  padding-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
+  transition: color 0.2s, opacity 0.2s;
+  box-sizing: border-box;
+
+  &.past {
+    color: var(--text-tertiary);
+    opacity: 0.55;
+  }
 }
 
 .task-area {
@@ -273,15 +304,29 @@ function getRelativeDate(): string {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .hour-slot {
   height: 60px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--border-color);
   pointer-events: auto;
+  transition: background 0.2s;
+  box-sizing: border-box;
 
   &:hover {
     background: rgba(129, 201, 216, 0.1);
+  }
+
+  &.past {
+    background: rgba(0, 0, 0, 0.04);
+    cursor: not-allowed;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
   }
 }
 
@@ -305,14 +350,6 @@ function getRelativeDate(): string {
   .add-task-btn {
     padding: 8px 12px;
     font-size: 12px;
-  }
-
-  .time-axis {
-    width: 50px;
-  }
-
-  .hour-label {
-    font-size: 10px;
   }
 }
 </style>

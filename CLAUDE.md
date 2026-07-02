@@ -1,4 +1,4 @@
-# PlanFlow 项目 - CLAUDE 内部指令
+# PlanFlow 项目 - Claude 内部指令
 
 ## 自定义 Skill：`build-apk`
 
@@ -9,39 +9,73 @@
 - "想在手机上看效果" / "手机调试" / "热重载开发"
 - `/build-apk [live|release|both]`
 
-**执行方式**：
-```powershell
-# PowerShell（推荐，Windows 原生）
-powershell -ExecutionPolicy Bypass -File ./scripts/build-apk/build.ps1 live
-powershell -ExecutionPolicy Bypass -File ./scripts/build-apk/build.ps1 release
-powershell -ExecutionPolicy Bypass -File ./scripts/build-apk/build.ps1 both
+**脚本特性（通用、跨机器、跨用户）**：
+- 首次运行**自动扫描**本机所有常见路径的 JDK 21+ / Android SDK / Node
+- 找不到就**交互式引导**自动下载补装（JDK 21 便携版 + Android cmdline-tools）
+- 配置**持久化**到 `~/.planflow-build/config.json`，换项目复用
+- 支持 4 个子命令：`detect` / `init` / `set-config` / `firewall`
+- 兼容 Windows PowerShell、Git Bash、Linux bash、macOS bash
 
-# 或 bash（Git Bash / WSL）
-bash ./scripts/build-apk/build.sh live|release|both
+### 执行方式
+
+**Windows PowerShell**：
+```powershell
+.\scripts\build-apk\build.ps1              # 默认 live
+.\scripts\build-apk\build.ps1 live         # Live Reload 版
+.\scripts\build-apk\build.ps1 release      # 生产正式版
+.\scripts\build-apk\build.ps1 both         # 两种都打
+.\scripts\build-apk\build.ps1 -Detect      # 检测环境
+.\scripts\build-apk\build.ps1 -Init        # 交互式生成配置
+.\scripts\build-apk\build.ps1 -SetConfig jdkPath "C:\jdk21"   # 手动指定路径
+.\scripts\build-apk\build.ps1 -Firewall    # 放行 vite 端口
 ```
 
-**前置环境**（首次打包前确认）：
-- JDK 21：`C:\Users\ljadmin\jdk-tmp\jdk-21.0.11+10`
-- Android SDK：`C:\Users\ljadmin\AppData\Local\Android\Sdk`
-- Node 18+、npm（已装）
-- 防火墙规则（Live 模式需要）：
-  ```powershell
-  New-NetFirewallRule -DisplayName "Vite Dev 3012" -Direction Inbound -Protocol TCP -LocalPort 3012 -Action Allow
-  ```
+**Bash（Git Bash / Linux / macOS）**：
+```bash
+bash scripts/build-apk/build.sh live|release|both
+bash scripts/build-apk/build.sh detect
+bash scripts/build-apk/build.sh init
+bash scripts/build-apk/build.sh set-config jdkPath /path/to/jdk
+bash scripts/build-apk/build.sh firewall
+```
 
-**产物位置**：
-- `C:\Users\ljadmin\Desktop\PlanFlow-livereload.apk`（Live Reload 版）
-- `C:\Users\ljadmin\Desktop\PlanFlow-release.apk`（生产正式版）
+### 配置文件（自动生成，位于 `~/.planflow-build/config.json`）
 
-**执行完后必须告知用户**：
-1. APK 在桌面，可 USB/微信/adb 传手机安装
+```json
+{
+  "jdkPath": "自动检测的 JDK 路径（可手动覆盖）",
+  "androidSdkPath": "自动检测的 Android SDK 路径",
+  "vitePort": 3012,
+  "autoInstallJdk": true,
+  "autoInstallSdk": true,
+  "copyToDesktop": true
+}
+```
+
+环境变量覆盖（临时）：`PLANFLOW_JDK` / `PLANFLOW_SDK` / `PLANFLOW_VITE_PORT`
+
+### 前置环境要求（未满足脚本会引导安装）
+
+- JDK 21+（Capacitor 8 硬性要求）
+- Android SDK（platform-tools、build-tools、platforms）
+- Node 18+ / npm
+- Live 模式需放行防火墙端口 3012
+
+### 产物位置
+
+- `C:\Users\<当前用户>\Desktop\PlanFlow-livereload.apk`
+- `C:\Users\<当前用户>\Desktop\PlanFlow-release.apk`
+
+### 执行完后必须告知用户
+
+1. APK 在桌面，可 USB / 微信文件助手 / adb 传手机安装
 2. 首次安装允许"未知来源"
 3. Live 模式需启动 `npm run dev`，手机连同一 WiFi 打开 APP 即实时刷新
 4. 切 WiFi / 换电脑 IP 需重打 live 版（IP 写死在 APK 里）
 5. 用 Chrome `chrome://inspect` 可远程调试手机 WebView
 
-## 其他重要路径
+### 其他重要路径
 
-- `capacitor.config.ts`：Capacitor 配置，live 模式会改这里的 server.url
+- `capacitor.config.ts`：Capacitor 配置，live 模式脚本会改 server.url
 - `android/`：Android 原生工程
 - `android/app/build/outputs/apk/debug/`：原始 APK 位置

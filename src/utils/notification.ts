@@ -1,7 +1,8 @@
 // 提醒通知封装 - 支持 Service Worker 后台提醒
-import { getTasksByDate } from './db'
+import { getTasksByDate, getSettings } from './db'
 import type { Task } from '../types'
 import { timeToMinutes, getToday } from './timeUtils'
+import { sendPushPlus, buildReminderContent } from './pushplus'
 
 let notificationPermission: NotificationPermission = 'default'
 let reminderCheckInterval: number | null = null
@@ -110,10 +111,13 @@ export interface ReminderToast {
   category: string
 }
 
+// 用于去重同一条提醒（避免 60 秒轮询期间重复推送微信）
+const pushedReminderKeys = new Set<string>()
+
 // 检查当前时间是否有需要提醒的任务
 export async function checkReminders(): Promise<ReminderToast[]> {
   const today = getToday()
-  const tasks = await getTasksByDate(today)
+  const [tasks, settings] = await Promise.all([getTasksByDate(today), getSettings()])
   const now = new Date()
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -135,11 +139,30 @@ export async function checkReminders(): Promise<ReminderToast[]> {
         category: task.category,
       })
 
-      // 同时发送系统通知
-      await sendNotification(
-        `任务提醒: ${task.title}`,
-        `即将开始 (${task.startTime}) - ${task.description || ''}`
-      )
+      // 仅当用户开启了系统级通知时才发送浏览器 Notification
+      if (settings.notificationsEnabled) {
+        await sendNotification(
+          `任务提醒: ${task.title}`,
+          `即将开始 (${task.startTime}) - ${task.description || ''}`
+        )
+      }
+
+      // 微信推送（去重：同一任务同一天只推一次）
+      const pushKey = `${today}-${task.id}`
+      if (settings.pushplusEnabled && settings.pushplusToken && !pushedReminderKeys.has(pushKey)) {
+        pushedReminderKeys.add(pushKey)
+        sendPushPlus({
+          token: settings.pushplusToken,
+          topic: settings.pushplusTopic || undefined,
+          title: `任务提醒: ${task.title}`,
+          content: buildReminderContent({
+            title: task.title,
+            startTime: task.startTime,
+            description: task.description,
+            category: task.category,
+          }),
+        }).catch(err => console.error('PushPlus 推送失败:', err))
+      }
     }
   }
 

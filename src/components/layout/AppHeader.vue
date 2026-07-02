@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
@@ -7,15 +7,20 @@ import { useSettingStore } from '../../stores/settingStore'
 import ViewSwitcher from './ViewSwitcher.vue'
 import StatsPanel from '../common/StatsPanel.vue'
 import ThemeToggle from '../common/ThemeToggle.vue'
+import SettingsPanel from '../common/SettingsPanel.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
 
+const showSettings = ref(false)
+
 // 当前视图标题
 const viewTitle = computed(() => {
   const d = dayjs(uiStore.selectedDate)
   switch (uiStore.currentView) {
+    case 'year':
+      return d.format('YYYY年')
     case 'month':
       return d.format('YYYY年MM月')
     case 'week': {
@@ -83,17 +88,26 @@ function toggleStats() {
       <button class="action-btn" @click="openTaskForm" title="新建任务">
         <span>+</span>
       </button>
+      <button class="action-btn" @click="uiStore.openBulkDialog()" title="批量/导入">
+        <span>📥</span>
+      </button>
       <button class="action-btn" @click="toggleSearch" title="搜索">
         <span>🔍</span>
       </button>
       <button class="action-btn" @click="toggleStats" title="统计">
         <span>📊</span>
       </button>
+      <button class="action-btn" @click="showSettings = true" title="设置">
+        <span>⚙️</span>
+      </button>
       <ThemeToggle />
     </div>
 
     <!-- 统计面板 -->
     <StatsPanel v-if="uiStore.showStatsPanel" />
+
+    <!-- 设置面板 -->
+    <SettingsPanel v-model="showSettings" />
   </header>
 </template>
 

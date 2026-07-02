@@ -11,10 +11,11 @@ export interface Category {
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'work', name: '工作', color: '#81C9D8', icon: 'Briefcase', order: 1 },
   { id: 'study', name: '学习', color: '#7BC47F', icon: 'Reading', order: 2 },
-  { id: 'life', name: '生活', color: '#F5A962', icon: 'Home', order: 3 },
-  { id: 'health', name: '健康', color: '#E8A0BF', icon: 'Heart', order: 4 },
-  { id: 'social', name: '社交', color: '#B8A9C9', icon: 'User', order: 5 },
-  { id: 'other', name: '其他', color: '#A8A8A8', icon: 'More', order: 6 },
+  { id: 'fitness', name: '健身', color: '#F27B7B', icon: 'Trophy', order: 3 },
+  { id: 'life', name: '生活', color: '#F5A962', icon: 'Home', order: 4 },
+  { id: 'health', name: '健康', color: '#E8A0BF', icon: 'Heart', order: 5 },
+  { id: 'social', name: '社交', color: '#B8A9C9', icon: 'User', order: 6 },
+  { id: 'other', name: '其他', color: '#A8A8A8', icon: 'More', order: 7 },
 ]
 
 // 根据分类ID获取颜色

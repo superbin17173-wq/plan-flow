@@ -4,21 +4,25 @@ import { ref } from 'vue'
 import dayjs from 'dayjs'
 
 export const useUiStore = defineStore('ui', () => {
-  const currentView = ref<'month' | 'week' | 'day'>('month')
+  const currentView = ref<'month' | 'week' | 'day' | 'year'>('month')
   const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
   const selectedTaskId = ref<string | null>(null)
   const showTaskForm = ref(false)
   const showTaskCard = ref(false)
   const showStatsPanel = ref(false)
   const showSearchPanel = ref(false)
+  const showBulkDialog = ref(false)
+  const showProfileDialog = ref(false)
+  const showMealLog = ref(false)
   const searchQuery = ref('')
   const filterCategory = ref<string | null>(null)
   const filterPriority = ref<string | null>(null)
   const filterCompleted = ref<boolean | null>(null)
-  const previousView = ref<'month' | 'week' | 'day'>('month')
+  const previousView = ref<'month' | 'week' | 'day' | 'year'>('month')
+  const prefillTime = ref<string | null>(null) // 预填充的开始时间
 
   // 切换视图
-  function setView(view: 'month' | 'week' | 'day') {
+  function setView(view: 'month' | 'week' | 'day' | 'year') {
     previousView.value = currentView.value
     currentView.value = view
   }
@@ -41,6 +45,9 @@ export const useUiStore = defineStore('ui', () => {
   function goPrev() {
     const d = dayjs(selectedDate.value)
     switch (currentView.value) {
+      case 'year':
+        selectedDate.value = d.subtract(1, 'year').format('YYYY-MM-DD')
+        break
       case 'month':
         selectedDate.value = d.subtract(1, 'month').format('YYYY-MM-DD')
         break
@@ -57,6 +64,9 @@ export const useUiStore = defineStore('ui', () => {
   function goNext() {
     const d = dayjs(selectedDate.value)
     switch (currentView.value) {
+      case 'year':
+        selectedDate.value = d.add(1, 'year').format('YYYY-MM-DD')
+        break
       case 'month':
         selectedDate.value = d.add(1, 'month').format('YYYY-MM-DD')
         break
@@ -75,9 +85,10 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   // 打开新建任务表单
-  function openTaskForm(taskId?: string, prefillDate?: string, prefillTime?: string) {
+  function openTaskForm(taskId?: string, prefillDate?: string, time?: string) {
     selectedTaskId.value = taskId || null
     if (prefillDate) selectedDate.value = prefillDate
+    prefillTime.value = time || null
     showTaskForm.value = true
   }
 
@@ -85,6 +96,7 @@ export const useUiStore = defineStore('ui', () => {
   function closeTaskForm() {
     showTaskForm.value = false
     selectedTaskId.value = null
+    prefillTime.value = null
   }
 
   // 打开任务详情
@@ -119,6 +131,8 @@ export const useUiStore = defineStore('ui', () => {
   function getViewTitle(): string {
     const d = dayjs(selectedDate.value)
     switch (currentView.value) {
+      case 'year':
+        return d.format('YYYY年')
       case 'month':
         return d.format('YYYY年MM月')
       case 'week': {
@@ -133,6 +147,13 @@ export const useUiStore = defineStore('ui', () => {
     }
   }
 
+  function openBulkDialog() { showBulkDialog.value = true }
+  function closeBulkDialog() { showBulkDialog.value = false }
+  function openProfileDialog() { showProfileDialog.value = true }
+  function closeProfileDialog() { showProfileDialog.value = false }
+  function openMealLog() { showMealLog.value = true }
+  function closeMealLog() { showMealLog.value = false }
+
   return {
     currentView,
     selectedDate,
@@ -141,11 +162,15 @@ export const useUiStore = defineStore('ui', () => {
     showTaskCard,
     showStatsPanel,
     showSearchPanel,
+    showBulkDialog,
+    showProfileDialog,
+    showMealLog,
     searchQuery,
     filterCategory,
     filterPriority,
     filterCompleted,
     previousView,
+    prefillTime,
     setView,
     selectDate,
     goBack,
@@ -158,6 +183,12 @@ export const useUiStore = defineStore('ui', () => {
     closeTaskCard,
     toggleStatsPanel,
     toggleSearchPanel,
+    openBulkDialog,
+    closeBulkDialog,
+    openProfileDialog,
+    closeProfileDialog,
+    openMealLog,
+    closeMealLog,
     getViewTitle,
   }
 })

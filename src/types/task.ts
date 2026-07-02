@@ -1,4 +1,6 @@
 // 任务类型定义
+import type { WorkoutExercise } from './health'
+
 export interface Task {
   id: string
   title: string
@@ -12,6 +14,7 @@ export interface Task {
   isCompleted: boolean
   recurrence?: RecurrenceRule
   remindAt?: number // 提前多少分钟提醒
+  workout?: WorkoutExercise[] // 健身分类专用:动作/组数
   createdAt: number
   updatedAt: number
 }
@@ -33,6 +36,7 @@ export interface TaskFormData {
   endTime: string
   recurrence?: RecurrenceRule
   remindAt?: number
+  workout?: WorkoutExercise[]
 }
 
 // 用于创建新任务的默认值

@@ -3,18 +3,25 @@ import { onMounted, computed, ref } from 'vue'
 import { useUiStore } from './stores/uiStore'
 import { useTaskStore } from './stores/taskStore'
 import { useSettingStore } from './stores/settingStore'
+import { useHealthStore } from './stores/healthStore'
 import { initReminderSystem, type ReminderToast } from './utils/notification'
 import AppHeader from './components/layout/AppHeader.vue'
 import MonthView from './components/calendar/MonthView.vue'
 import WeekView from './components/calendar/WeekView.vue'
 import DayView from './components/calendar/DayView.vue'
+import YearWeekView from './components/calendar/YearWeekView.vue'
 import TaskForm from './components/task/TaskForm.vue'
 import TaskCard from './components/task/TaskCard.vue'
 import SearchBar from './components/common/SearchBar.vue'
+import BulkTaskDialog from './components/common/BulkTaskDialog.vue'
+import ProfileDialog from './components/common/ProfileDialog.vue'
+import MealQuickLog from './components/common/MealQuickLog.vue'
+import ChatBubble from './components/ai/ChatBubble.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
+const healthStore = useHealthStore()
 
 // 提醒 Toast 状态
 const reminderToast = ref<ReminderToast | null>(null)
@@ -41,16 +48,17 @@ function closeToast() {
 onMounted(async () => {
   await settingStore.loadSettings()
   await taskStore.loadTasks()
+  await healthStore.loadAll()
 
-  // 初始化提醒系统（前台+后台）
-  if (settingStore.settings.notificationsEnabled) {
-    initReminderSystem(handleReminder)
-  }
+  // 提醒系统始终运行,但仅对显式打开提醒的任务(task.remindAt 有值)才触发。
+  // 全局 notificationsEnabled 现作为系统通知(浏览器 Notification)的开关,不影响应用内 Toast 提醒。
+  initReminderSystem(handleReminder)
 })
 
 // 当前视图组件
 const currentViewComponent = computed(() => {
   switch (uiStore.currentView) {
+    case 'year': return YearWeekView
     case 'month': return MonthView
     case 'week': return WeekView
     case 'day': return DayView
@@ -81,6 +89,21 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
     <TaskForm />
     <TaskCard />
     <SearchBar />
+    <BulkTaskDialog
+      :model-value="uiStore.showBulkDialog"
+      @update:model-value="uiStore.showBulkDialog = $event"
+    />
+    <ProfileDialog
+      :model-value="uiStore.showProfileDialog"
+      @update:model-value="uiStore.showProfileDialog = $event"
+    />
+    <MealQuickLog
+      :model-value="uiStore.showMealLog"
+      @update:model-value="uiStore.showMealLog = $event"
+    />
+
+    <!-- AI 助手浮动按钮 -->
+    <ChatBubble />
 
     <!-- 提醒 Toast -->
     <Transition name="toast">

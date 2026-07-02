@@ -65,7 +65,16 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    host: '0.0.0.0',
+    port: 3012,
+    proxy: {
+      // 火山方舟豆包 API - 浏览器不允许直连(无 CORS),开发环境走本地代理
+      '/api/ark': {
+        target: 'https://ark.cn-beijing.volces.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ark/, '/api/v3'),
+      },
+    },
   },
   build: {
     sourcemap: true,

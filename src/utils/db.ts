@@ -1,6 +1,6 @@
 // IndexedDB 操作封装
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Task, Category, Settings } from '../types'
+import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage } from '../types'
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../types'
 
 interface SettingRow {
@@ -22,27 +22,61 @@ interface PlanFlowDB extends DBSchema {
     key: string
     value: SettingRow
   }
+  workouts: {
+    key: string
+    value: WorkoutEntry
+    indexes: { 'by-date': string }
+  }
+  measurements: {
+    key: string
+    value: MeasurementEntry
+    indexes: { 'by-date': string }
+  }
+  meals: {
+    key: string
+    value: MealEntry
+    indexes: { 'by-date': string }
+  }
+  ai_messages: {
+    key: string
+    value: AIMessage
+    indexes: { 'by-createdAt': number }
+  }
 }
 
 const DB_NAME = 'PlanFlowDB'
-const DB_VERSION = 1
+const DB_VERSION = 3
 
 let dbPromise: Promise<IDBPDatabase<PlanFlowDB>> | null = null
 
 export async function getDB(): Promise<IDBPDatabase<PlanFlowDB>> {
   if (!dbPromise) {
     dbPromise = openDB<PlanFlowDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        // 任务存储
-        const taskStore = db.createObjectStore('tasks', { keyPath: 'id' })
-        taskStore.createIndex('by-date', 'date')
-        taskStore.createIndex('by-category', 'category')
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const taskStore = db.createObjectStore('tasks', { keyPath: 'id' })
+          taskStore.createIndex('by-date', 'date')
+          taskStore.createIndex('by-category', 'category')
 
-        // 分类存储
-        db.createObjectStore('categories', { keyPath: 'id' })
+          db.createObjectStore('categories', { keyPath: 'id' })
+          db.createObjectStore('settings', { keyPath: 'key' })
+        }
 
-        // 设置存储
-        db.createObjectStore('settings', { keyPath: 'key' })
+        if (oldVersion < 2) {
+          const w = db.createObjectStore('workouts', { keyPath: 'id' })
+          w.createIndex('by-date', 'date')
+
+          const m = db.createObjectStore('measurements', { keyPath: 'id' })
+          m.createIndex('by-date', 'date')
+
+          const ml = db.createObjectStore('meals', { keyPath: 'id' })
+          ml.createIndex('by-date', 'date')
+        }
+
+        if (oldVersion < 3) {
+          const ai = db.createObjectStore('ai_messages', { keyPath: 'id' })
+          ai.createIndex('by-createdAt', 'createdAt')
+        }
       },
     })
   }
@@ -91,12 +125,15 @@ export async function getTasksByDateRange(startDate: string, endDate: string): P
 
 export async function addTask(task: Task): Promise<void> {
   const db = await getDB()
-  await db.put('tasks', task)
+  // 深拷贝以去除Vue reactive proxy，避免IndexedDB序列化失败
+  // 注意: structuredClone 无法克隆Vue reactive proxy，改用JSON序列化
+  await db.put('tasks', JSON.parse(JSON.stringify(task)))
 }
 
 export async function updateTask(task: Task): Promise<void> {
   const db = await getDB()
-  await db.put('tasks', task)
+  // 深拷贝以去除Vue reactive proxy
+  await db.put('tasks', JSON.parse(JSON.stringify(task)))
 }
 
 export async function deleteTask(id: string): Promise<void> {
@@ -123,7 +160,7 @@ export async function addCategory(category: Category): Promise<void> {
 // 设置操作
 export async function getSettings(): Promise<Settings> {
   const db = await getDB()
-  const settingsKeys = ['theme', 'defaultView', 'defaultCategory', 'weekStartsOn', 'timeFormat', 'notificationsEnabled', 'defaultRemindAt']
+  const settingsKeys = ['theme', 'defaultView', 'defaultCategory', 'weekStartsOn', 'timeFormat', 'notificationsEnabled', 'defaultRemindAt', 'pushplusEnabled', 'pushplusToken', 'pushplusTopic', 'profileHeight', 'profileWeight', 'profileAge', 'profileGender', 'profileActivity', 'aiEnabled', 'aiApiKey', 'aiModel', 'aiHistoryLimitMB', 'doubaoEnabled', 'doubaoApiKey', 'doubaoModel']
   const result: Partial<Settings> = {}
 
   for (const key of settingsKeys) {
@@ -131,9 +168,9 @@ export async function getSettings(): Promise<Settings> {
     if (stored) {
       const val = stored.value
       // 类型转换
-      if (key === 'weekStartsOn' || key === 'defaultRemindAt') {
+      if (key === 'weekStartsOn' || key === 'defaultRemindAt' || key === 'profileHeight' || key === 'profileWeight' || key === 'profileAge' || key === 'aiHistoryLimitMB') {
         (result as Record<string, number>)[key] = Number(val)
-      } else if (key === 'notificationsEnabled') {
+      } else if (key === 'notificationsEnabled' || key === 'pushplusEnabled' || key === 'aiEnabled' || key === 'doubaoEnabled') {
         (result as Record<string, boolean>)[key] = val === 'true'
       } else {
         (result as Record<string, string>)[key] = val
@@ -195,9 +232,54 @@ export async function importData(data: { tasks?: Task[]; categories?: Category[]
 // 清空所有数据
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['tasks', 'categories', 'settings'], 'readwrite')
+  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals'], 'readwrite')
   await tx.objectStore('tasks').clear()
   await tx.objectStore('categories').clear()
   await tx.objectStore('settings').clear()
+  await tx.objectStore('workouts').clear()
+  await tx.objectStore('measurements').clear()
+  await tx.objectStore('meals').clear()
   await tx.done
+}
+
+// 健身训练
+export async function getAllWorkouts(): Promise<WorkoutEntry[]> {
+  const db = await getDB()
+  return db.getAll('workouts')
+}
+export async function putWorkout(w: WorkoutEntry): Promise<void> {
+  const db = await getDB()
+  await db.put('workouts', w)
+}
+export async function deleteWorkout(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('workouts', id)
+}
+
+// 体重与身体指标
+export async function getAllMeasurements(): Promise<MeasurementEntry[]> {
+  const db = await getDB()
+  return db.getAll('measurements')
+}
+export async function putMeasurement(m: MeasurementEntry): Promise<void> {
+  const db = await getDB()
+  await db.put('measurements', m)
+}
+export async function deleteMeasurement(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('measurements', id)
+}
+
+// 饮食
+export async function getAllMeals(): Promise<MealEntry[]> {
+  const db = await getDB()
+  return db.getAll('meals')
+}
+export async function putMeal(m: MealEntry): Promise<void> {
+  const db = await getDB()
+  await db.put('meals', m)
+}
+export async function deleteMeal(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('meals', id)
 }

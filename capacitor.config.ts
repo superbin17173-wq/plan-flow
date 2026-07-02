@@ -4,6 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.planflow.app',
   appName: 'PlanFlow',
   webDir: 'dist',
+  server: {
+    url: 'http://10.6.4.111:3012',
+    cleartext: true,
+  },
   android: {
     backgroundColor: '#F5F7FA',
   },

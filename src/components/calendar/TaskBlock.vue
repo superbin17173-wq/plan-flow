@@ -3,13 +3,17 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { Task } from '../../types'
 import { getCategoryById } from '../../types/category'
 import { getTaskPosition, minutesToTime, timeToMinutes } from '../../utils/timeUtils'
+import { calcTaskCalories, currentWeight } from '../../utils/calorie'
 import { useTaskStore } from '../../stores/taskStore'
+import { useSettingStore } from '../../stores/settingStore'
+import { useHealthStore } from '../../stores/healthStore'
 
 const props = defineProps<{
   task: Task
   hourHeight: number
   overlapIndex?: number
   isDragging?: boolean
+  isPast?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +23,8 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const settingStore = useSettingStore()
+const healthStore = useHealthStore()
 
 // 计算位置
 const position = computed(() => {
@@ -63,31 +69,52 @@ const timeDisplay = computed(() => {
   return `${props.task.startTime} - ${props.task.endTime}`
 })
 
+// 健身摘要
+const workoutSummary = computed(() => {
+  const w = props.task.workout
+  if (!w || w.length === 0) return null
+  let volume = 0
+  let setCount = 0
+  for (const ex of w) {
+    for (const s of ex.sets) {
+      setCount++
+      if (s.weight != null && s.reps != null) volume += s.weight * s.reps
+    }
+  }
+  // 最新体重
+  const latestM = [...healthStore.measurements]
+    .filter(m => m.weight && m.weight > 0)
+    .sort((a, b) => b.date.localeCompare(a.date))[0]
+  const weight = currentWeight(settingStore.settings, latestM)
+  const kcal = calcTaskCalories(props.task, weight)
+  return { exCount: w.length, setCount, volume: Math.round(volume), kcal }
+})
+
 // 拖拽处理
 let dragStartY = 0
-let dragOriginalTop = 0
-let dragOriginalHeight = 0
+let dragOrigStartMin = 0
+let dragOrigEndMin = 0
 let isResizing = false
+let rafId: number | null = null
+let pendingStart: string | null = null
+let pendingEnd: string | null = null
 
 function handleMouseDown(e: MouseEvent) {
-  if (props.task.isCompleted) return
+  if (props.task.isCompleted || props.isPast) return
   e.preventDefault()
 
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const taskEl = e.currentTarget as HTMLElement
 
   // 判断是否点击在底部（调整高度）
   const clickY = e.clientY - rect.top
   const taskHeight = rect.height
   const isBottomClick = clickY > taskHeight - 10
 
-  if (isBottomClick) {
-    isResizing = true
-  }
+  isResizing = isBottomClick
 
   dragStartY = e.clientY
-  dragOriginalTop = position.value.top
-  dragOriginalHeight = position.value.height
+  dragOrigStartMin = timeToMinutes(props.task.startTime)
+  dragOrigEndMin = timeToMinutes(props.task.endTime)
 
   emit('dragStart', props.task.id, e.clientY, position.value.top, position.value.height)
 
@@ -95,29 +122,58 @@ function handleMouseDown(e: MouseEvent) {
   document.addEventListener('mouseup', handleMouseUp)
 }
 
-async function handleMouseMove(e: MouseEvent) {
+function scheduleUpdate() {
+  if (rafId !== null) return
+  rafId = requestAnimationFrame(async () => {
+    rafId = null
+    if (pendingStart !== null && pendingEnd !== null) {
+      const s = pendingStart
+      const e = pendingEnd
+      pendingStart = null
+      pendingEnd = null
+      await taskStore.dragUpdateTaskTime(props.task.id, s, e)
+    }
+  })
+}
+
+function handleMouseMove(e: MouseEvent) {
   if (!props.isDragging) return
 
   const deltaY = e.clientY - dragStartY
   const deltaMinutes = Math.round((deltaY / props.hourHeight) * 60)
+  const duration = dragOrigEndMin - dragOrigStartMin
+
+  let newStart: number
+  let newEnd: number
 
   if (isResizing) {
-    // 调整结束时间
-    const newEndMinutes = timeToMinutes(props.task.endTime) + deltaMinutes
-    const newEndTime = minutesToTime(Math.max(newEndMinutes, timeToMinutes(props.task.startTime) + 30))
-    await taskStore.dragUpdateTaskTime(props.task.id, props.task.startTime, newEndTime)
+    newStart = dragOrigStartMin
+    newEnd = Math.max(dragOrigEndMin + deltaMinutes, dragOrigStartMin + 15)
+    newEnd = Math.min(newEnd, 1440)
   } else {
-    // 移动任务
-    const newStartMinutes = timeToMinutes(props.task.startTime) + deltaMinutes
-    const newEndMinutes = timeToMinutes(props.task.endTime) + deltaMinutes
-    const clampedStart = Math.max(0, Math.min(newStartMinutes, 1440 - 60))
-    const clampedEnd = Math.max(clampedStart + 30, Math.min(newEndMinutes, 1440))
-    await taskStore.dragUpdateTaskTime(props.task.id, minutesToTime(clampedStart), minutesToTime(clampedEnd))
+    newStart = dragOrigStartMin + deltaMinutes
+    newStart = Math.max(0, Math.min(newStart, 1440 - duration))
+    newEnd = newStart + duration
   }
+
+  pendingStart = minutesToTime(newStart)
+  pendingEnd = minutesToTime(newEnd)
+  scheduleUpdate()
 }
 
 function handleMouseUp() {
   isResizing = false
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+  if (pendingStart !== null && pendingEnd !== null) {
+    const s = pendingStart
+    const e = pendingEnd
+    pendingStart = null
+    pendingEnd = null
+    taskStore.dragUpdateTaskTime(props.task.id, s, e)
+  }
   emit('dragEnd')
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('mouseup', handleMouseUp)
@@ -127,7 +183,7 @@ function handleMouseUp() {
 <template>
   <div
     class="task-block"
-    :class="[priorityClass, completedClass, draggingClass]"
+    :class="[priorityClass, completedClass, draggingClass, { past: isPast }]"
     :style="{
       top: `${position.top}px`,
       height: `${position.height}px`,
@@ -137,10 +193,15 @@ function handleMouseUp() {
     @click="emit('click', $event)"
     @mousedown="handleMouseDown"
   >
-    <div class="task-title">{{ task.title }}</div>
+    <div class="task-title">
+      <span v-if="workoutSummary" class="workout-icon">💪</span>{{ task.title }}
+    </div>
     <div class="task-time">{{ timeDisplay }}</div>
+    <div v-if="workoutSummary" class="task-workout">
+      {{ workoutSummary.exCount }} 动作 · {{ workoutSummary.setCount }} 组<span v-if="workoutSummary.volume > 0"> · {{ workoutSummary.volume }}kg</span><span v-if="workoutSummary.kcal > 0"> · 🔥 {{ workoutSummary.kcal }}kcal</span>
+    </div>
     <!-- 拖拽调整指示器 -->
-    <div class="resize-handle" v-if="!task.isCompleted"></div>
+    <div class="resize-handle" v-if="!task.isCompleted && !isPast"></div>
   </div>
 </template>
 
@@ -149,8 +210,8 @@ function handleMouseUp() {
   position: absolute;
   left: 10px;
   width: calc(100% - 20px);
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: 12px;
+  padding: 8px 10px;
   color: white;
   cursor: grab;
   transition: all 0.2s ease;
@@ -182,10 +243,22 @@ function handleMouseUp() {
     text-decoration: line-through;
     cursor: default;
   }
+
+  &.past {
+    background-color: var(--text-tertiary) !important;
+    color: rgba(255, 255, 255, 0.9);
+    filter: grayscale(0.7);
+    cursor: pointer;
+
+    &:hover {
+      filter: grayscale(0.5) brightness(1.05);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+  }
 }
 
 .task-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -193,9 +266,24 @@ function handleMouseUp() {
 }
 
 .task-time {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 13px;
+  opacity: 0.85;
   margin-top: 4px;
+}
+
+.task-workout {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  display: inline-block;
+  font-family: monospace;
+}
+
+.workout-icon {
+  margin-right: 4px;
 }
 
 .resize-handle {
