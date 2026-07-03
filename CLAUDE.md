@@ -79,3 +79,65 @@ bash scripts/build-apk/build.sh firewall
 - `capacitor.config.ts`：Capacitor 配置，live 模式脚本会改 server.url
 - `android/`：Android 原生工程
 - `android/app/build/outputs/apk/debug/`：原始 APK 位置
+
+---
+
+## 自定义 Skill：`deploy-ota`
+
+**用途**：一键部署 PlanFlow 前端代码到 Cloudflare Pages，实现手机 APP 远程热更新。
+
+**触发关键词**（用户说这些话就调用）：
+- "部署 OTA" / "远程更新" / "热更新部署"
+- "推送到 Cloudflare" / "更新手机 APP"
+- `/deploy-ota`
+
+### 一键部署命令
+
+```bash
+npm run deploy:ota
+```
+
+这条命令会：
+1. 构建前端代码 (`vue-tsc -b && vite build`)
+2. 生成 `version.json` + `dist.zip`
+3. 自动上传到 Cloudflare Pages
+
+### OTA 更新地址
+
+```
+https://planflow-aot.pages.dev/version.json
+https://planflow-aot.pages.dev/dist.zip
+```
+
+### 手机 APP 更新流程
+
+1. APP 启动时检查 `version.json`
+2. 发现新版本弹出对话框
+3. 用户点击"立即更新"
+4. 下载 `dist.zip` → 解压 → 重启生效
+
+### 关键文件
+
+| 文件 | 作用 |
+|------|------|
+| `src/utils/otaUpdate.ts` | OTA 核心逻辑（检查版本、下载、解压） |
+| `src/components/common/OtaUpdate.vue` | 更新对话框 UI |
+| `scripts/generate-ota.mjs` | 构建 post-process，生成 version.json + dist.zip |
+| `docs/ota-update.md` | OTA 功能完整文档 |
+| `docs/ota-deploy-skill.md` | 本 skill 详细文档 |
+
+### 版本号管理
+
+版本号来自 `package.json` 的 `version` 字段。更新版本后重新部署：
+
+```bash
+# 修改 package.json version 字段
+npm run deploy:ota
+```
+
+### 验证部署
+
+```bash
+curl https://planflow-aot.pages.dev/version.json
+npx wrangler pages deployment list --project-name planflow
+```
