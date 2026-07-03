@@ -57,8 +57,8 @@ function onGroupChange(ex: WorkoutExercise) {
   const opts = exerciseOptions(ex.muscleGroup || '其他')
   ex.name = opts[0] || ''
   // 保留组数,仅在没值时补默认值
-  const dw = DEFAULT_WEIGHT_BY_GROUP[ex.muscleGroup] ?? 20
-  const dr = DEFAULT_REPS_BY_GROUP[ex.muscleGroup] ?? 10
+  const dw = DEFAULT_WEIGHT_BY_GROUP[ex.muscleGroup || '其他'] ?? 20
+  const dr = DEFAULT_REPS_BY_GROUP[ex.muscleGroup || '其他'] ?? 10
   ex.sets = ex.sets.map(s => ({
     reps: s.reps || dr,
     weight: s.weight != null ? s.weight : dw,
@@ -82,9 +82,10 @@ function removeExercise(idx: number) {
 function addSet(exIdx: number) {
   const ex = workoutExercises.value[exIdx]
   const last = ex.sets[ex.sets.length - 1]
+  const group = ex.muscleGroup || '其他'
   ex.sets.push({
-    reps: last?.reps ?? (DEFAULT_REPS_BY_GROUP[ex.muscleGroup] ?? 10),
-    weight: last?.weight ?? DEFAULT_WEIGHT_BY_GROUP[ex.muscleGroup] ?? 20,
+    reps: last?.reps ?? (DEFAULT_REPS_BY_GROUP[group] ?? 10),
+    weight: last?.weight ?? (DEFAULT_WEIGHT_BY_GROUP[group] ?? 20),
   })
 }
 function removeSet(exIdx: number, setIdx: number) {

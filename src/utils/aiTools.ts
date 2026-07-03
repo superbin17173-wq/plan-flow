@@ -10,7 +10,7 @@ import dayjs from 'dayjs'
 // 工具描述（发送给 DeepSeek 的 tools 字段）
 export const AI_TOOLS = [
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'addTask',
       description: '新增一个任务/计划。需要提供标题、日期、开始时间。其他字段可选。',
@@ -31,7 +31,7 @@ export const AI_TOOLS = [
     },
   },
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'updateTask',
       description: '修改已有任务。必须提供 taskId。可通过 queryTasks 先获取 id。',
@@ -54,7 +54,7 @@ export const AI_TOOLS = [
     },
   },
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'deleteTask',
       description: '删除任务。此操作需要用户二次确认。',
@@ -68,7 +68,7 @@ export const AI_TOOLS = [
     },
   },
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'queryTasks',
       description: '查询任务。可按日期范围或关键词过滤。返回符合条件的任务列表。',
@@ -85,7 +85,7 @@ export const AI_TOOLS = [
     },
   },
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'bulkAddTasks',
       description: '批量新增任务，用于生成重复日程（如"每周三下午 2 点开周会连续 4 周"）。',
@@ -115,7 +115,7 @@ export const AI_TOOLS = [
     },
   },
   {
-    type: 'function',
+    type: 'function' as const,
     function: {
       name: 'addMeal',
       description: '记录一餐饮食（早餐/午餐/晚餐/加餐）。适用于用户口头告知吃了什么。',

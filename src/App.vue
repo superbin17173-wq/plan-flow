@@ -17,6 +17,7 @@ import BulkTaskDialog from './components/common/BulkTaskDialog.vue'
 import ProfileDialog from './components/common/ProfileDialog.vue'
 import MealQuickLog from './components/common/MealQuickLog.vue'
 import ChatBubble from './components/ai/ChatBubble.vue'
+import OtaUpdate from './components/common/OtaUpdate.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
@@ -104,6 +105,9 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
 
     <!-- AI 助手浮动按钮 -->
     <ChatBubble />
+
+    <!-- OTA 远程更新 -->
+    <OtaUpdate />
 
     <!-- 提醒 Toast -->
     <Transition name="toast">

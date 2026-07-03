@@ -210,14 +210,14 @@ export async function importData(data: { tasks?: Task[]; categories?: Category[]
   // 导入任务
   if (data.tasks) {
     for (const task of data.tasks) {
-      await db.put('tasks', task)
+      await db.put('tasks', JSON.parse(JSON.stringify(task)))
     }
   }
 
   // 导入分类
   if (data.categories) {
     for (const cat of data.categories) {
-      await db.put('categories', cat)
+      await db.put('categories', JSON.parse(JSON.stringify(cat)))
     }
   }
 
@@ -249,7 +249,7 @@ export async function getAllWorkouts(): Promise<WorkoutEntry[]> {
 }
 export async function putWorkout(w: WorkoutEntry): Promise<void> {
   const db = await getDB()
-  await db.put('workouts', w)
+  await db.put('workouts', JSON.parse(JSON.stringify(w)))
 }
 export async function deleteWorkout(id: string): Promise<void> {
   const db = await getDB()
@@ -263,7 +263,7 @@ export async function getAllMeasurements(): Promise<MeasurementEntry[]> {
 }
 export async function putMeasurement(m: MeasurementEntry): Promise<void> {
   const db = await getDB()
-  await db.put('measurements', m)
+  await db.put('measurements', JSON.parse(JSON.stringify(m)))
 }
 export async function deleteMeasurement(id: string): Promise<void> {
   const db = await getDB()
@@ -277,7 +277,7 @@ export async function getAllMeals(): Promise<MealEntry[]> {
 }
 export async function putMeal(m: MealEntry): Promise<void> {
   const db = await getDB()
-  await db.put('meals', m)
+  await db.put('meals', JSON.parse(JSON.stringify(m)))
 }
 export async function deleteMeal(id: string): Promise<void> {
   const db = await getDB()

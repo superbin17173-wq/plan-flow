@@ -6,17 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:ota": "vue-tsc -b && vite build && node scripts/generate-ota.mjs",
+    "ota:serve": "node scripts/ota-server.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/filesystem": "^8.1.2",
     "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/preferences": "^8.0.1",
     "@element-plus/icons-vue": "^2.3.2",
     "dayjs": "^1.11.21",
     "element-plus": "^2.14.2",
     "idb": "^8.0.3",
+    "jszip": "^3.10.1",
     "pinia": "^3.0.4",
     "playwright-core": "1.60.0",
     "sass": "^1.101.0",
