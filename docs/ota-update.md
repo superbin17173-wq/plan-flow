@@ -5,10 +5,39 @@
 OTA (Over-The-Air) 远程更新允许 PlanFlow APP 在不重新安装 APK 的情况下，通过网络自动下载并应用最新版本代码。
 
 **核心原理**：
-1. APP 启动时检查服务器的 `version.json`
+1. APP 启动时检查 Cloudflare Pages 的 `version.json`
 2. 发现新版本则下载 `dist.zip`
 3. 解压到本地 `planflow-updates/` 目录
 4. 重启 APP 自动加载最新代码
+
+## 一键部署
+
+```bash
+# 部署到 Cloudflare Pages（自动构建 + 上传）
+npm run deploy:ota
+```
+
+部署后 OTA 地址：`https://planflow.pages.dev`
+
+## 部署平台：Cloudflare Pages
+
+免费、HTTPS、全球 CDN、国内访问较快、自动部署。
+
+### 首次配置
+
+1. 安装 Wrangler CLI：`npm install wrangler --save-dev`
+2. 登录授权：`npx wrangler login`
+3. 部署：`npm run deploy:ota`
+
+### 更新流程
+
+每次修改代码后：
+
+```bash
+npm run deploy:ota
+```
+
+一行命令完成构建 + 部署，手机 APP 下次打开自动检测更新。
 
 ## 文件结构
 
@@ -21,66 +50,13 @@ OTA (Over-The-Air) 远程更新允许 PlanFlow APP 在不重新安装 APK 的情
 
 修改文件：
 ├── src/App.vue                     # 添加 OtaUpdate 组件
-├── package.json                    # 新增 build:ota / ota:serve 命令
+├── package.json                    # 新增 build:ota / deploy:ota 命令
 ├── vite.config.ts                  # base: './' 支持相对路径
 ├── capacitor.config.ts             # 移除固定 server.url
 ├── src/utils/db.ts                 # 深拷贝修复 IndexedDB 存储
 ├── src/utils/aiTools.ts            # 类型断言 as const
 ├── src/components/task/TaskForm.vue # muscleGroup undefined 修复
 ```
-
-## 使用流程
-
-### 1. 打包生成更新文件
-
-```bash
-npm run build:ota
-```
-
-产物：
-- `dist/version.json` - 版本信息
-- `dist/dist.zip` - 压缩的完整前端代码
-
-### 2. 部署到服务器
-
-将 `dist/` 目录部署到任意 HTTP 服务器（Nginx/Apache/Node）：
-
-**Nginx 示例**：
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    root /var/www/planflow/dist;
-
-    # version.json 和 dist.zip 不缓存
-    location ~* \.(json|zip)$ {
-        expires 0;
-        add_header Cache-Control "no-cache";
-    }
-
-    # 静态资源长缓存
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
-
-### 3. 配置更新服务器地址
-
-修改 `scripts/generate-ota.mjs` 和 `src/utils/otaUpdate.ts` 中的：
-
-```ts
-const UPDATE_SERVER = 'http://10.6.4.111:3016'  // 改成你的服务器地址
-```
-
-### 4. 手机 APP 自动更新
-
-- APP 启动时自动检测更新
-- 发现新版本弹出更新对话框
-- 用户点击"立即更新"下载并安装
-- 2 秒后自动重启完成更新
 
 ## 本地测试
 
@@ -96,13 +72,13 @@ npm run ota:serve
 ### 版本检测逻辑
 
 ```ts
-// 检查 version.json
-const remote = await fetch(`${UPDATE_SERVER}/version.json`)
+// 检查 Cloudflare Pages 的 version.json
+const remote = await fetch('https://planflow.pages.dev/version.json')
 const localVersion = await Preferences.get({ key: 'ota_version' })
 
 // 比较版本号
 if (remote.version !== localVersion) {
-  // 有更新
+  // 有更新，弹出对话框
 }
 ```
 
@@ -124,23 +100,22 @@ if (remote.version !== localVersion) {
 ## 部署架构图
 
 ```
-┌─────────────────┐     HTTP      ┌──────────────────┐
-│   云服务器       │◄────────────►│   手机 APP        │
-│  /dist/         │              │  OtaUpdate.vue    │
-│  ├─ version.json│  检查版本     │                  │
-│  ├─ dist.zip    │  下载更新     │  planflow-updates│
-│  └─ assets/     │              │  ├─ index.html   │
+┌─────────────────┐     HTTPS     ┌──────────────────┐
+│ Cloudflare Pages│◄────────────►│   手机 APP        │
+│ planflow.pages  │              │  OtaUpdate.vue    │
+│ ├─ version.json │  检查版本     │                  │
+│ ├─ dist.zip     │  下载更新     │  planflow-updates│
+│ └─ assets/      │              │  ├─ index.html   │
 └─────────────────┘              │  ├─ assets/      │
                                  └──────────────────┘
 ```
 
 ## 注意事项
 
-1. **网络要求**：手机需能访问服务器（WiFi/4G/5G 均可）
-2. **防火墙**：服务器需开放对应端口
-3. **版本号**：`package.json` 的 version 字段决定更新提示
-4. **首次安装**：新 APK 需要用户手动安装一次，之后全自动更新
-5. **回滚**：清除 Preferences 中的 `ota_version` 可触发重新下载
+1. **网络要求**：手机需能访问 Cloudflare（WiFi/4G/5G 均可）
+2. **版本号**：`package.json` 的 version 字段决定更新提示
+3. **首次安装**：新 APK 需要用户手动安装一次，之后全自动更新
+4. **回滚**：清除 Preferences 中的 `ota_version` 可触发重新下载
 
 ## 其他 Bug 修复
 

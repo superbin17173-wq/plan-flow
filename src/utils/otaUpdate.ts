@@ -5,8 +5,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import JSZip from 'jszip'
 import { Preferences } from '@capacitor/preferences'
 
-// 更新服务器地址（部署 dist/ 的服务器）
-const UPDATE_SERVER = 'http://10.6.4.111:3016'
+// 更新服务器地址（Cloudflare Pages）
+const UPDATE_SERVER = 'https://planflow.pages.dev'
 const VERSION_PATH = '/version.json'
 const DIST_ZIP_PATH = '/dist.zip'
 const LOCAL_DIR = 'planflow-updates'
