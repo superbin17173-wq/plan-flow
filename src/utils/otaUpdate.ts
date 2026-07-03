@@ -57,9 +57,20 @@ export async function downloadAndUpdate(
   onProgress?: (percent: number) => void
 ): Promise<boolean> {
   try {
-    // 下载 zip
-    const res = await fetch(`${UPDATE_SERVER}${DIST_ZIP_PATH}`)
-    if (!res.ok) return false
+    // 下载 zip（添加超时和错误处理）
+    console.log('OTA: 开始下载', `${UPDATE_SERVER}${DIST_ZIP_PATH}`)
+
+    const res = await fetch(`${UPDATE_SERVER}${DIST_ZIP_PATH}`, {
+      mode: 'cors',
+      cache: 'no-store',
+    })
+
+    console.log('OTA: 响应状态', res.status)
+
+    if (!res.ok) {
+      console.error('OTA: 下载失败，HTTP', res.status)
+      return false
+    }
 
     const total = Number(res.headers.get('content-length')) || 0
     const reader = res.body?.getReader()

@@ -73,7 +73,7 @@ onMounted(() => {
           </div>
 
           <div v-if="updateDone" class="ota-success">
-            <p>✅ 更新完成，正在重启...</p>
+            <p>✅ 更新完成 (v{{ updateInfo?.version }})，正在重启...</p>
           </div>
 
           <div v-if="updateError" class="ota-error">

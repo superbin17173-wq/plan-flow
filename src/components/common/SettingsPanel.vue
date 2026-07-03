@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { useSettingStore } from '../../stores/settingStore'
 import { sendPushPlus } from '../../utils/pushplus'
 import { useAIChat } from '../../composables/useAIChat'
+import { checkForUpdate, downloadAndUpdate, type UpdateInfo } from '../../utils/otaUpdate'
+import { Capacitor } from '@capacitor/core'
 
 const settingStore = useSettingStore()
 const aiChat = useAIChat()
@@ -17,6 +19,52 @@ const isOpen = computed({
 
 const testing = ref(false)
 const testResult = ref<{ ok: boolean; msg: string } | null>(null)
+
+// OTA 更新相关
+const otaChecking = ref(false)
+const otaInfo = ref<UpdateInfo | null>(null)
+const otaDownloading = ref(false)
+const otaProgress = ref(0)
+const otaError = ref('')
+
+async function checkOtaUpdate() {
+  if (!Capacitor.isNativePlatform()) {
+    otaError.value = '仅在手机 APP 中可用'
+    return
+  }
+  otaChecking.value = true
+  otaError.value = ''
+  otaInfo.value = null
+
+  const info = await checkForUpdate()
+  otaChecking.value = false
+  otaInfo.value = info
+
+  if (!info.hasUpdate) {
+    otaError.value = '已是最新版本'
+  }
+}
+
+async function doOtaUpdate() {
+  otaDownloading.value = true
+  otaError.value = ''
+  otaProgress.value = 0
+
+  const success = await downloadAndUpdate((p) => {
+    otaProgress.value = p
+  })
+
+  otaDownloading.value = false
+
+  if (success) {
+    otaError.value = '更新完成，重启后生效'
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
+  } else {
+    otaError.value = '更新失败，请检查网络连接'
+  }
+}
 
 async function testPush() {
   const token = settingStore.settings.pushplusToken.trim()
@@ -261,6 +309,44 @@ async function onDoubaoModelBlur() {
               </ol>
             </div>
           </section>
+
+          <!-- OTA 远程更新 -->
+          <section class="settings-section">
+            <h3>APP 远程更新</h3>
+            <p class="hint">检查是否有新版本，无需重新安装 APK 即可更新</p>
+
+            <div class="ota-status">
+              <p v-if="otaInfo">
+                当前版本: {{ otaInfo.localVersion }}<br>
+                最新版本: {{ otaInfo.version }}
+              </p>
+              <p v-if="otaError" :class="{ 'ota-success': otaError.includes('完成') }">{{ otaError }}</p>
+            </div>
+
+            <div v-if="otaDownloading" class="ota-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: otaProgress + '%' }"></div>
+              </div>
+              <span>{{ otaProgress }}%</span>
+            </div>
+
+            <div class="actions">
+              <button class="btn" :disabled="otaChecking || otaDownloading" @click="checkOtaUpdate">
+                {{ otaChecking ? '检查中...' : '检查更新' }}
+              </button>
+              <button
+                v-if="otaInfo?.hasUpdate && !otaDownloading"
+                class="btn"
+                @click="doOtaUpdate"
+              >
+                立即更新
+              </button>
+            </div>
+
+            <div class="notice">
+              <p class="warn">⚠️ 如提示网络错误，请切换 WiFi/4G 重试。Cloudflare 在部分运营商网络下可能不稳定。</p>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -468,5 +554,41 @@ async function onDoubaoModelBlur() {
 .settings-fade-enter-from,
 .settings-fade-leave-to {
   opacity: 0;
+}
+
+.ota-status {
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ota-success {
+  color: #22c55e;
+}
+
+.ota-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+
+  .progress-bar {
+    height: 6px;
+    width: 100px;
+    background: var(--bg-primary);
+    border-radius: 3px;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      background: var(--color-work);
+      transition: width 0.2s;
+    }
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
 }
 </style>
