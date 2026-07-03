@@ -7,7 +7,7 @@ import JSZip from 'jszip'
 const DIST_DIR = join(process.cwd(), 'dist')
 const VERSION_FILE = join(DIST_DIR, 'version.json')
 const ZIP_FILE = join(DIST_DIR, 'dist.zip')
-const UPDATE_SERVER = 'https://planflow.pages.dev'
+const UPDATE_SERVER = 'https://planflow-aot.pages.dev'
 
 const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'))
 

@@ -17,7 +17,7 @@ OTA (Over-The-Air) 远程更新允许 PlanFlow APP 在不重新安装 APK 的情
 npm run deploy:ota
 ```
 
-部署后 OTA 地址：`https://planflow.pages.dev`
+部署后 OTA 地址：`https://planflow-aot.pages.dev`
 
 ## 部署平台：Cloudflare Pages
 
@@ -73,7 +73,7 @@ npm run ota:serve
 
 ```ts
 // 检查 Cloudflare Pages 的 version.json
-const remote = await fetch('https://planflow.pages.dev/version.json')
+const remote = await fetch('https://planflow-aot.pages.dev/version.json')
 const localVersion = await Preferences.get({ key: 'ota_version' })
 
 // 比较版本号
@@ -102,7 +102,7 @@ if (remote.version !== localVersion) {
 ```
 ┌─────────────────┐     HTTPS     ┌──────────────────┐
 │ Cloudflare Pages│◄────────────►│   手机 APP        │
-│ planflow.pages  │              │  OtaUpdate.vue    │
+│ planflow-aot   │              │  OtaUpdate.vue    │
 │ ├─ version.json │  检查版本     │                  │
 │ ├─ dist.zip     │  下载更新     │  planflow-updates│
 │ └─ assets/      │              │  ├─ index.html   │
