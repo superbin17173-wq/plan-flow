@@ -454,7 +454,7 @@ async function confirmBulkCreate() {
   text-align: center;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .form-grid { grid-template-columns: 1fr; }
   .modal-panel { padding: 14px; }
 }

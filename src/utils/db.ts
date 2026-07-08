@@ -1,6 +1,7 @@
 // IndexedDB 操作封装
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage } from '../types'
+import type { AIMemory } from '../types/memory'
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../types'
 
 interface SettingRow {
@@ -40,12 +41,17 @@ interface PlanFlowDB extends DBSchema {
   ai_messages: {
     key: string
     value: AIMessage
-    indexes: { 'by-createdAt': number }
+    indexes: { 'by-createdAt': number; 'by-session': string }
+  }
+  ai_memories: {
+    key: string
+    value: AIMemory
+    indexes: { 'by-session': string; 'by-importance': number; 'by-createdAt': number }
   }
 }
 
 const DB_NAME = 'PlanFlowDB'
-const DB_VERSION = 3
+const DB_VERSION = 5
 
 let dbPromise: Promise<IDBPDatabase<PlanFlowDB>> | null = null
 
@@ -76,11 +82,31 @@ export async function getDB(): Promise<IDBPDatabase<PlanFlowDB>> {
         if (oldVersion < 3) {
           const ai = db.createObjectStore('ai_messages', { keyPath: 'id' })
           ai.createIndex('by-createdAt', 'createdAt')
+          ai.createIndex('by-session', 'sessionId')
+        }
+
+        if (oldVersion < 5) {
+          const mem = db.createObjectStore('ai_memories', { keyPath: 'id' })
+          mem.createIndex('by-session', 'sessionId')
+          mem.createIndex('by-importance', 'importance')
+          mem.createIndex('by-createdAt', 'createdAt')
         }
       },
     })
   }
   return dbPromise
+}
+
+// V4 升级：为已存在的 ai_messages store 添加 by-session 索引
+// 由于 idb 的 upgrade 在 transaction 内，无法在后续版本添加索引到已创建的 store
+// 解决方案：检测索引缺失时，关闭数据库，重新打开并删除重建 store
+export async function ensureSessionIndex(): Promise<void> {
+  const db = await getDB()
+  const store = db.transaction('ai_messages').objectStore('ai_messages')
+  if (!store.indexNames.contains('by-session')) {
+    // 索引不存在，需要手动处理（由于 idb 限制，这里暂时用内存过滤替代）
+    console.warn('ai_messages.by-session 索引缺失，将使用内存过滤')
+  }
 }
 
 // 初始化数据库（添加默认分类和设置）

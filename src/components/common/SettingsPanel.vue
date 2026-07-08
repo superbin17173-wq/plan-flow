@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useSettingStore } from '../../stores/settingStore'
+import { useTaskStore } from '../../stores/taskStore'
 import { sendPushPlus } from '../../utils/pushplus'
 import { useAIChat } from '../../composables/useAIChat'
-import { checkForUpdate, downloadAndUpdate, type UpdateInfo } from '../../utils/otaUpdate'
+import { checkForUpdate, downloadAndUpdate, getUpdateIndexPath, type UpdateInfo } from '../../utils/otaUpdate'
+import { mergeStudyTasks, getMergeableStudyTasks } from '../../utils/mergeStudy'
+import type { Task } from '../../types'
 import { Capacitor } from '@capacitor/core'
+import StorageManager from './StorageManager.vue'
+import { APP_VERSION } from '../../utils/version'
 
 const settingStore = useSettingStore()
+const taskStore = useTaskStore()
 const aiChat = useAIChat()
 
 const props = defineProps<{ modelValue: boolean }>()
@@ -20,12 +26,49 @@ const isOpen = computed({
 const testing = ref(false)
 const testResult = ref<{ ok: boolean; msg: string } | null>(null)
 
+// 学习管理 - 合并
+const mergeableTasks = ref<Task[]>([])
+const mergeTarget = ref<string | null>(null)
+const mergeSource = ref<string | null>(null)
+const merging = ref(false)
+const mergeResult = ref<string | null>(null)
+
+onMounted(async () => {
+  mergeableTasks.value = await getMergeableStudyTasks()
+})
+
+async function doMerge() {
+  if (!mergeTarget.value || !mergeSource.value) return
+  if (mergeTarget.value === mergeSource.value) {
+    mergeResult.value = '请选择两个不同的学习任务'
+    return
+  }
+  merging.value = true
+  mergeResult.value = null
+  try {
+    const merged = await mergeStudyTasks(mergeTarget.value, mergeSource.value)
+    if (merged) {
+      mergeResult.value = `✅ 合并完成: ${merged.study?.subject}`
+      // 刷新列表
+      mergeableTasks.value = await getMergeableStudyTasks()
+      await taskStore.loadTasks()
+      mergeTarget.value = null
+      mergeSource.value = null
+    }
+  } catch (e) {
+    mergeResult.value = `❌ 合并失败: ${e instanceof Error ? e.message : String(e)}`
+  } finally {
+    merging.value = false
+  }
+}
+
 // OTA 更新相关
 const otaChecking = ref(false)
 const otaInfo = ref<UpdateInfo | null>(null)
 const otaDownloading = ref(false)
 const otaProgress = ref(0)
 const otaError = ref('')
+const otaDone = ref(false)
 
 async function checkOtaUpdate() {
   if (!Capacitor.isNativePlatform()) {
@@ -35,6 +78,7 @@ async function checkOtaUpdate() {
   otaChecking.value = true
   otaError.value = ''
   otaInfo.value = null
+  otaDone.value = false
 
   const info = await checkForUpdate()
   otaChecking.value = false
@@ -50,19 +94,26 @@ async function doOtaUpdate() {
   otaError.value = ''
   otaProgress.value = 0
 
-  const success = await downloadAndUpdate((p) => {
+  const result = await downloadAndUpdate((p) => {
     otaProgress.value = p
   })
 
   otaDownloading.value = false
 
-  if (success) {
-    otaError.value = '更新完成，重启后生效'
-    setTimeout(() => {
-      window.location.reload()
-    }, 1500)
+  if (result.success) {
+    otaDone.value = true
+    otaError.value = ''
   } else {
-    otaError.value = '更新失败，请检查网络连接'
+    otaError.value = result.error || '更新失败'
+  }
+}
+
+async function reloadNow() {
+  const indexPath = await getUpdateIndexPath()
+  if (indexPath) {
+    window.location.href = indexPath
+  } else {
+    window.location.reload()
   }
 }
 
@@ -137,6 +188,26 @@ async function onDoubaoKeyBlur() {
 }
 async function onDoubaoModelBlur() {
   await settingStore.updateSetting('doubaoModel', settingStore.settings.doubaoModel.trim())
+}
+
+// 睡眠时间配置
+async function onSleepStartBlur() {
+  const val = settingStore.settings.sleepStartTime.trim()
+  if (!/^([01]?\d|2[0-3]):([0-5]\d)$/.test(val)) {
+    settingStore.settings.sleepStartTime = '23:00'
+    await settingStore.updateSetting('sleepStartTime', '23:00')
+  } else {
+    await settingStore.updateSetting('sleepStartTime', val)
+  }
+}
+async function onSleepEndBlur() {
+  const val = settingStore.settings.sleepEndTime.trim()
+  if (!/^([01]?\d|2[0-3]):([0-5]\d)$/.test(val)) {
+    settingStore.settings.sleepEndTime = '07:00'
+    await settingStore.updateSetting('sleepEndTime', '07:00')
+  } else {
+    await settingStore.updateSetting('sleepEndTime', val)
+  }
 }
 </script>
 
@@ -310,17 +381,47 @@ async function onDoubaoModelBlur() {
             </div>
           </section>
 
+          <!-- 睡眠时间配置 -->
+          <section class="settings-section">
+            <h3>⏰ 时间统计</h3>
+            <p class="hint">设置睡眠时间，用于日视图圆饼图计算休息时间</p>
+
+            <div class="sleep-time-grid">
+              <label class="field-inline">
+                <span>入睡时间</span>
+                <input
+                  type="time"
+                  v-model="settingStore.settings.sleepStartTime"
+                  @blur="onSleepStartBlur"
+                />
+              </label>
+              <label class="field-inline">
+                <span>起床时间</span>
+                <input
+                  type="time"
+                  v-model="settingStore.settings.sleepEndTime"
+                  @blur="onSleepEndBlur"
+                />
+              </label>
+            </div>
+
+            <div class="notice">
+              <p class="hint">💡 默认睡眠时间 23:00 - 07:00（8小时）。日视图会自动计算任务时间、睡眠时间和剩余休息时间。</p>
+            </div>
+          </section>
+
           <!-- OTA 远程更新 -->
           <section class="settings-section">
-            <h3>APP 远程更新</h3>
+            <h3>APP 远程更新 <span class="version-badge">v{{ APP_VERSION }}</span></h3>
             <p class="hint">检查是否有新版本，无需重新安装 APK 即可更新</p>
 
             <div class="ota-status">
-              <p v-if="otaInfo">
+              <p v-if="otaInfo && !otaDone">
                 当前版本: {{ otaInfo.localVersion }}<br>
-                最新版本: {{ otaInfo.version }}
+                最新版本: <b>{{ otaInfo.version }}</b>
               </p>
-              <p v-if="otaError" :class="{ 'ota-success': otaError.includes('完成') }">{{ otaError }}</p>
+              <p v-if="otaDone" class="ota-success">✅ 新版本已下载，点击下方按钮启用</p>
+              <p v-if="otaError && !otaDone" :class="{ 'ota-success': otaError.includes('最新') }">{{ otaError }}</p>
             </div>
 
             <div v-if="otaDownloading" class="ota-progress">
@@ -335,17 +436,64 @@ async function onDoubaoModelBlur() {
                 {{ otaChecking ? '检查中...' : '检查更新' }}
               </button>
               <button
-                v-if="otaInfo?.hasUpdate && !otaDownloading"
+                v-if="otaInfo?.hasUpdate && !otaDownloading && !otaDone"
                 class="btn"
                 @click="doOtaUpdate"
               >
-                立即更新
+                立即下载
+              </button>
+              <button
+                v-if="otaDone"
+                class="btn primary-btn"
+                @click="reloadNow"
+              >
+                立即启用
               </button>
             </div>
 
             <div class="notice">
               <p class="warn">⚠️ 如提示网络错误，请切换 WiFi/4G 重试。Cloudflare 在部分运营商网络下可能不稳定。</p>
             </div>
+          </section>
+
+          <!-- 学习管理 -->
+          <section class="settings-section" v-if="mergeableTasks.length >= 2">
+            <h3>📚 学习管理</h3>
+            <p class="hint">合并两个学习任务的知识库（材料、复习历史、AI会话）</p>
+
+            <div class="merge-row">
+              <label>目标任务（保留）:</label>
+              <select v-model="mergeTarget" class="merge-select">
+                <option value="">请选择</option>
+                <option v-for="t in mergeableTasks" :key="t.id" :value="t.id">{{ t.study?.subject }}</option>
+              </select>
+            </div>
+
+            <div class="merge-row">
+              <label>合并来源（归档）:</label>
+              <select v-model="mergeSource" class="merge-select">
+                <option value="">请选择</option>
+                <option v-for="t in mergeableTasks" :key="t.id" :value="t.id">{{ t.study?.subject }}</option>
+              </select>
+            </div>
+
+            <p v-if="mergeResult" class="merge-result">{{ mergeResult }}</p>
+
+            <div class="actions">
+              <button class="btn" :disabled="merging || !mergeTarget || !mergeSource" @click="doMerge">
+                {{ merging ? '合并中...' : '确认合并' }}
+              </button>
+            </div>
+
+            <div class="notice">
+              <p class="hint">💡 合并后来源任务将归档，30天后自动清理。复习历史按时间合并，SM-2状态取保守值确保不会错过复习。</p>
+            </div>
+          </section>
+
+          <!-- 存储管理 -->
+          <section class="settings-section">
+            <h3>📦 存储管理</h3>
+            <StorageManager />
           </section>
         </div>
       </div>
@@ -354,62 +502,63 @@ async function onDoubaoModelBlur() {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格设置面板
 .settings-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 3000;
-  padding: 20px;
 }
 
 .settings-panel {
-  background: var(--bg-secondary);
-  border-radius: 12px;
+  background: #F2F2F7;
+  border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 520px;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 .settings-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E5EA;
+  position: relative;
 
   h2 {
     font-size: 18px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: #1A1A1A;
     margin: 0;
   }
 }
 
 .close-btn {
+  position: absolute;
+  right: 16px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--bg-primary);
-  color: var(--text-tertiary);
+  background: transparent;
+  color: #8E8E93;
   font-size: 20px;
   line-height: 1;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
 }
 
 .settings-body {
-  padding: 20px;
+  padding: 16px;
   overflow-y: auto;
   flex: 1;
+  background: #F2F2F7;
 }
 
 .settings-section {
@@ -418,8 +567,18 @@ async function onDoubaoModelBlur() {
   h3 {
     font-size: 15px;
     font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 12px 0;
+    color: #1A1A1A;
+    margin: 0 0 8px 0;
+    padding-left: 16px;
+  }
+}
+
+// iOS 风格卡片组
+.settings-section {
+  h3 + * {
+    background: #FFFFFF;
+    border-radius: 12px;
+    overflow: hidden;
   }
 }
 
@@ -427,52 +586,65 @@ async function onDoubaoModelBlur() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 14px 16px;
   cursor: pointer;
+  background: #FFFFFF;
 
   span {
-    color: var(--text-primary);
-    font-size: 14px;
+    color: #1A1A1A;
+    font-size: 16px;
   }
 
   input[type='checkbox'] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
+    width: 22px;
+    height: 22px;
+    accent-color: #007AFF;
   }
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 12px 0;
+  padding: 12px 16px;
+  background: #FFFFFF;
 
   span {
-    font-size: 13px;
-    color: var(--text-secondary);
+    font-size: 14px;
+    color: #8E8E93;
   }
 
   input, select {
-    padding: 8px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 14px;
-    font-family: monospace;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #F2F2F7;
+    color: #1A1A1A;
+    font-size: 16px;
+    font-family: inherit;
 
     &:focus {
       outline: none;
-      border-color: var(--color-work);
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
     }
   }
 }
 
 .hint {
+  font-size: 13px;
+  color: #8E8E93;
+  margin: 8px 0;
+  padding-left: 16px;
+}
+
+.version-badge {
   font-size: 12px;
-  color: var(--text-tertiary);
-  margin: 4px 0 0 0;
+  background: #E5E5EA;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: #8E8E93;
+  margin-left: 8px;
 }
 
 .actions {
@@ -484,34 +656,36 @@ async function onDoubaoModelBlur() {
 }
 
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  background: var(--color-work);
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: #007AFF;
   color: white;
-  font-size: 13px;
-  transition: filter 0.2s;
+  font-size: 16px;
+  font-weight: 500;
+  transition: opacity 0.2s;
 
-  &:hover:not(:disabled) {
-    filter: brightness(1.1);
+  &:active:not(:disabled) {
+    opacity: 0.8;
   }
 
   &:disabled {
-    opacity: 0.6;
+    background: #E5E5EA;
+    color: #8E8E93;
     cursor: not-allowed;
   }
 
   &.danger-btn {
-    background: #ef4444;
+    background: #FF3B30;
   }
 }
 
 .ai-usage {
-  font-size: 12px;
-  color: var(--text-tertiary);
+  font-size: 13px;
+  color: #8E8E93;
 }
 
 .test-result {
-  font-size: 12px;
+  font-size: 13px;
 
   &.ok {
     color: #22c55e;
@@ -562,8 +736,47 @@ async function onDoubaoModelBlur() {
   color: var(--text-secondary);
 }
 
+.sleep-time-grid {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #FFFFFF;
+}
+
+.field-inline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  span {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  input[type="time"] {
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+    }
+  }
+}
+
 .ota-success {
-  color: #22c55e;
+  color: #34C759;
+  font-weight: 500;
+}
+
+.primary-btn {
+  background: #34C759 !important;
 }
 
 .ota-progress {
@@ -589,6 +802,69 @@ async function onDoubaoModelBlur() {
   span {
     font-size: 12px;
     color: var(--text-tertiary);
+  }
+}
+
+.merge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    min-width: 120px;
+  }
+}
+
+.merge-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.merge-result {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 10px;
+
+  &[style*="✅"] {
+    background: rgba(80, 180, 100, 0.1);
+    color: rgb(60, 150, 80);
+  }
+
+  &[style*="❌"] {
+    background: rgba(240, 100, 100, 0.1);
+    color: rgb(200, 70, 70);
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .settings-panel {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+  }
+
+  .settings-body {
+    padding: 16px;
+  }
+
+  .close-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 </style>

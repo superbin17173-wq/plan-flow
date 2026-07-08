@@ -7,6 +7,7 @@ import { useSettingStore } from '../../stores/settingStore'
 import { timeToMinutes, minutesToTime, getTaskPosition, getConflictingTasks } from '../../utils/timeUtils'
 import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
 import TaskBlock from './TaskBlock.vue'
+import DayTimePie from './DayTimePie.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
@@ -131,6 +132,15 @@ function getRelativeDate(): string {
       </button>
     </div>
 
+    <!-- 时间统计圆饼图 -->
+    <div class="time-stats">
+      <DayTimePie
+        :tasks="dayTasks"
+        :sleep-start="settingStore.settings.sleepStartTime"
+        :sleep-end="settingStore.settings.sleepEndTime"
+      />
+    </div>
+
     <!-- 日内容 -->
     <div class="day-body">
       <!-- 时间轴 -->
@@ -177,11 +187,12 @@ function getRelativeDate(): string {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格日视图
 .day-calendar {
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  border-radius: 8px;
+  background: #FFFFFF;
+  border-radius: 12px;
   overflow-y: auto;
   max-height: calc(100vh - 100px);
 }
@@ -191,8 +202,8 @@ function getRelativeDate(): string {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background: var(--calendar-header-bg);
-  border-bottom: 1px solid var(--border-color);
+  background: #F2F2F7;
+  border-bottom: 1px solid #E5E5EA;
 }
 
 .nav-buttons {
@@ -201,33 +212,26 @@ function getRelativeDate(): string {
 }
 
 .nav-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-size: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: #007AFF;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
 
-  &:hover {
-    background: var(--bg-hover);
-    color: var(--color-work);
-  }
+  &:active { opacity: 0.6; }
 
   &.today-btn {
     width: auto;
-    padding: 0 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    background: var(--color-work);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 15px;
+    background: #007AFF;
     color: white;
-
-    &:hover {
-      filter: brightness(1.1);
-    }
+    font-weight: 500;
   }
 }
 
@@ -236,28 +240,26 @@ function getRelativeDate(): string {
 }
 
 .day-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #1A1A1A;
 }
 
 .day-relative {
-  font-size: 12px;
-  color: var(--text-tertiary);
+  font-size: 14px;
+  color: #8E8E93;
   margin-top: 4px;
 }
 
 .add-task-btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  background: var(--color-work);
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: #007AFF;
   color: white;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-size: 15px;
+  font-weight: 500;
 
-  &:hover {
-    filter: brightness(1.1);
-  }
+  &:active { opacity: 0.8; }
 }
 
 .day-body {
@@ -265,11 +267,17 @@ function getRelativeDate(): string {
   position: relative;
 }
 
+.time-stats {
+  padding: 12px 16px;
+  background: #F2F2F7;
+  border-bottom: 1px solid #E5E5EA;
+}
+
 .time-axis {
   width: 60px;
   flex-shrink: 0;
-  background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  background: #F2F2F7;
+  border-right: 1px solid #E5E5EA;
   display: flex;
   flex-direction: column;
 }
@@ -283,13 +291,12 @@ function getRelativeDate(): string {
   padding-top: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
-  transition: color 0.2s, opacity 0.2s;
+  color: #8E8E93;
+  border-bottom: 1px solid #E5E5EA;
   box-sizing: border-box;
 
   &.past {
-    color: var(--text-tertiary);
+    color: #C7C7CC;
     opacity: 0.55;
   }
 }
@@ -311,22 +318,17 @@ function getRelativeDate(): string {
 .hour-slot {
   height: 60px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #E5E5EA;
   pointer-events: auto;
-  transition: background 0.2s;
   box-sizing: border-box;
 
-  &:hover {
-    background: rgba(129, 201, 216, 0.1);
+  &:active {
+    background: rgba(0, 122, 255, 0.08);
   }
 
   &.past {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(0, 0, 0, 0.03);
     cursor: not-allowed;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
   }
 }
 
@@ -348,8 +350,8 @@ function getRelativeDate(): string {
   }
 
   .add-task-btn {
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 8px 14px;
+    font-size: 14px;
   }
 }
 </style>

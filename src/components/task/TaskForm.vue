@@ -6,6 +6,8 @@ import type { Task, TaskFormData, RecurrenceRule } from '../../types'
 import { DEFAULT_TASK } from '../../types'
 import { DEFAULT_CATEGORIES, getCategoryById } from '../../types/category'
 import { MUSCLE_GROUPS, EXERCISES_BY_GROUP, WEIGHT_OPTIONS, REP_OPTIONS, DEFAULT_WEIGHT_BY_GROUP, DEFAULT_REPS_BY_GROUP, type WorkoutExercise } from '../../types/health'
+import type { StudySession } from '../../types/study'
+import { extractTextFromPDF, isPDFFile } from '../../utils/pdfParser'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
@@ -103,6 +105,49 @@ watch(isFitness, (v) => {
     workoutExercises.value = [blankExercise()]
   }
 })
+
+// ==================== 学习任务相关 ====================
+const isStudy = computed(() => formData.value.category === 'study')
+const studyData = ref<StudySession>({ subject: '', materialText: '' })
+const enableEbbinghaus = ref(false)
+
+// 初始复习计划预览(展示给用户看会生成哪些复习任务)
+const initialIntervalDays = [1, 2, 4, 7, 15]
+
+// 上传 MD / 纯文本 / PDF 文件
+async function onStudyFileUpload(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (isPDFFile(file)) {
+    try {
+      const text = await extractTextFromPDF(file)
+      studyData.value.materialText = text
+      studyData.value.materialFileName = file.name
+    } catch (err) {
+      console.error('PDF 解析失败:', err)
+      // 可以显示错误提示
+    }
+  } else {
+    const text = await file.text()
+    studyData.value.materialText = text
+    studyData.value.materialFileName = file.name
+  }
+
+  target.value = '' // 允许重新上传同名文件
+}
+
+// 分类切换到学习时,默认从 title 填充 subject
+watch(isStudy, (v) => {
+  if (v && !studyData.value.subject) {
+    studyData.value.subject = formData.value.title || ''
+  }
+})
+watch(() => formData.value.title, (t) => {
+  if (isStudy.value && !studyData.value.subject) studyData.value.subject = t
+})
+
 
 // 是否是编辑模式
 const isEditMode = computed(() => uiStore.selectedTaskId !== null)
@@ -251,11 +296,27 @@ async function handleSubmit() {
     workoutClean = cleaned.length > 0 ? cleaned : undefined
   }
 
+  // 学习数据(仅学习分类)
+  let studyClean: StudySession | undefined
+  if (isStudy.value && studyData.value.subject.trim()) {
+    studyClean = {
+      subject: studyData.value.subject.trim(),
+      materialText: studyData.value.materialText || undefined,
+      materialFileName: studyData.value.materialFileName || undefined,
+    }
+    // 启用艾宾浩斯 → 让 taskStore 生成 ebbinghaus 结构与后续复习任务
+    if (enableEbbinghaus.value && !isEditMode.value) {
+      // 用一个占位标志,由 taskStore 判断并生成 ebbinghaus 字段
+      ;(studyClean as any).__enableEbbinghaus = true
+    }
+  }
+
   const submitData: TaskFormData = {
     ...formData.value,
     recurrence,
     remindAt: showReminder.value ? remindAt.value : undefined,
     workout: workoutClean,
+    study: studyClean,
   }
 
   // 先捕获编辑所需的任务 ID（closeTaskForm 会将其重置为 null）
@@ -435,6 +496,59 @@ watch(recurrenceType, (type) => {
                 <button type="button" class="wk-btn ghost full" @click="addExercise">＋ 添加动作</button>
               </div>
 
+              <!-- 学习计划(仅学习分类) -->
+              <div v-if="isStudy" class="form-group study-block">
+                <label class="form-label">📚 学习内容</label>
+                <input
+                  v-model="studyData.subject"
+                  class="form-input"
+                  placeholder="学习主题(如 GRE List 1 / 计算机八股文)"
+                />
+                <div class="study-material-row">
+                  <textarea
+                    v-model="studyData.materialText"
+                    class="form-textarea"
+                    rows="4"
+                    placeholder="粘贴学习材料(MD 或纯文本),用于后续复习和 AI 提问"
+                  ></textarea>
+                </div>
+                <div class="study-file-row">
+                  <label class="study-file-btn">
+                    📎 从文件读取 (.md / .txt / .pdf)
+                    <input
+                      type="file"
+                      accept=".md,.markdown,.txt,.pdf"
+                      @change="onStudyFileUpload"
+                      style="display: none"
+                    />
+                  </label>
+                  <span v-if="studyData.materialFileName" class="study-file-name">
+                    {{ studyData.materialFileName }}
+                  </span>
+                </div>
+
+                <label class="ebbinghaus-toggle">
+                  <input type="checkbox" v-model="enableEbbinghaus" />
+                  <span>🔁 启用艾宾浩斯复习计划(自动排期到日历)</span>
+                </label>
+
+                <div v-if="enableEbbinghaus" class="ebbinghaus-preview">
+                  <div class="ebbinghaus-tip">
+                    保存后将在以下日期自动生成 {{ initialIntervalDays.length }} 次复习任务:
+                  </div>
+                  <div class="ebbinghaus-schedule">
+                    <span
+                      v-for="d in initialIntervalDays"
+                      :key="d"
+                      class="ebbinghaus-day"
+                    >{{ d }} 天后</span>
+                  </div>
+                  <div class="ebbinghaus-hint">
+                    复习时选择"重来/困难/良好/简单",AI/SM-2 算法会智能调整后续间隔
+                  </div>
+                </div>
+              </div>
+
               <!-- 提醒 -->
               <div class="form-group">
                 <div class="toggle-row">
@@ -537,111 +651,113 @@ watch(recurrenceType, (type) => {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格任务表单
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
 }
 
 .modal-content {
-  background: var(--bg-secondary);
-  border-radius: 12px;
+  background: #F2F2F7;
+  border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
 
 .modal-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E5EA;
+  position: relative;
 
   h2 {
     font-size: 18px;
     font-weight: 600;
+    color: #1A1A1A;
   }
-}
 
-.close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    background: var(--bg-hover);
+  .close-btn {
+    position: absolute;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    color: #8E8E93;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 20px 16px;
   overflow-y: auto;
   flex: 1;
+  background: #F2F2F7;
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .form-row {
   display: flex;
   gap: 12px;
 
-  .half {
-    flex: 1;
-  }
+  .half { flex: 1; }
 }
 
 .form-label {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #8E8E93;
   margin-bottom: 8px;
   display: block;
 
   &.required::after {
     content: '*';
-    color: #E74C3C;
+    color: #FF3B30;
     margin-left: 4px;
   }
 }
 
 .form-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: all 0.2s;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: #FFFFFF;
+  color: #1A1A1A;
+  font-size: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 
   &:focus {
     outline: none;
-    border-color: var(--color-work);
+    box-shadow: 0 2px 8px rgba(0,122,255,0.2);
   }
 
   &.textarea {
     resize: vertical;
+    min-height: 80px;
   }
 }
 
+// iOS 风格分类按钮
 .category-options {
   display: flex;
   gap: 8px;
@@ -649,47 +765,40 @@ watch(recurrenceType, (type) => {
 }
 
 .category-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
   color: white;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  transition: all 0.2s;
-  opacity: 0.7;
-
-  &:hover {
-    opacity: 0.9;
-  }
+  opacity: 0.6;
 
   &.active {
     opacity: 1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
 }
 
+// iOS 风格优先级按钮
 .priority-options {
   display: flex;
   gap: 8px;
 }
 
 .priority-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #8E8E93;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 
   &.active {
-    background: var(--calendar-selected-bg);
-    color: var(--text-primary);
+    background: #007AFF;
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
   }
 }
 
@@ -699,31 +808,53 @@ watch(recurrenceType, (type) => {
   border-radius: 50%;
 }
 
+// iOS 开关样式
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: #FFFFFF;
+  padding: 14px 16px;
+  border-radius: 12px;
 }
 
 .toggle-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-tertiary);
-  font-size: 12px;
+  width: 50px;
+  height: 32px;
+  border-radius: 16px;
+  background: #E5E5EA;
+  color: transparent;
+  font-size: 0;
+  position: relative;
+  transition: background 0.3s;
 
-  &:hover {
-    background: var(--bg-hover);
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.3s;
   }
 
   &.active {
-    background: var(--color-work);
-    color: white;
+    background: #34C759;
+
+    &::after {
+      transform: translateX(18px);
+    }
   }
 }
 
 .recurrence-options, .reminder-options {
   margin-top: 12px;
+  padding: 12px;
+  background: #FFFFFF;
+  border-radius: 12px;
 }
 
 .weekday-select {
@@ -733,174 +864,123 @@ watch(recurrenceType, (type) => {
 }
 
 .weekday-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-tertiary);
-  font-size: 12px;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #E5E5EA;
+  color: #8E8E93;
+  font-size: 13px;
 
   &.active {
-    background: var(--color-work);
-    color: white;
+    background: #007AFF;
+    color: #FFFFFF;
   }
 }
 
+// iOS 风格底部按钮
 .modal-footer {
   display: flex;
   gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.workout-block {
-  background: rgba(242, 123, 123, 0.06);
-  border: 1px solid rgba(242, 123, 123, 0.25);
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.workout-tip {
-  color: var(--text-tertiary);
-  font-size: 12px;
-  margin-bottom: 10px;
-}
-
-.ex-card {
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ex-head {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.ex-sets {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-left: 6px;
-}
-
-.set-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-}
-
-.set-idx {
-  color: var(--text-tertiary);
-  min-width: 26px;
-  font-family: monospace;
-  font-size: 12px;
-}
-
-.times { color: var(--text-tertiary); font-size: 12px; }
-
-.wk-input {
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  font-family: inherit;
-  min-height: 36px;
-  &.tight { width: 96px; flex-shrink: 0; }
-  &.flex { flex: 1; min-width: 0; }
-  &.full { width: 100%; }
-  &.custom-name { margin-top: 4px; }
-}
-
-select.wk-input {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  padding-right: 24px;
-}
-
-.wk-btn {
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 12px;
-  &:hover { background: var(--bg-hover); }
-  &.danger { color: #c0392b; }
-  &.ghost {
-    background: transparent;
-    border: 1px dashed var(--border-color);
-    color: var(--text-secondary);
-  }
-  &.full { width: 100%; padding: 8px; }
+  padding: 16px;
+  background: #FFFFFF;
+  border-top: 1px solid #E5E5EA;
 }
 
 .cancel-btn {
   flex: 1;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 14px;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  padding: 14px;
+  border-radius: 12px;
+  background: #E5E5EA;
+  color: #1A1A1A;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .submit-btn {
   flex: 2;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--color-work);
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
+  padding: 14px;
+  border-radius: 12px;
+  background: #007AFF;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 600;
 
   &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    background: #E5E5EA;
+    color: #8E8E93;
   }
 }
 
-// 动画
+// 健身/学习模块保持原有功能样式，仅调整颜色
+.workout-block {
+  background: rgba(255, 59, 48, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.study-block {
+  background: rgba(0, 122, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .form-input, .form-textarea {
+    border-radius: 10px;
+  }
+}
+
+.ebbinghaus-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #1A1A1A;
+
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #007AFF;
+  }
+}
+
+.ebbinghaus-preview {
+  background: #FFFFFF;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.ebbinghaus-day {
+  padding: 6px 12px;
+  background: rgba(0, 122, 255, 0.15);
+  color: #007AFF;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+// 动画 - iOS 底部滑入效果
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.25s;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
 
 .slide-enter-active, .slide-leave-active {
-  transition: transform 0.3s, opacity 0.3s;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .slide-enter-from, .slide-leave-to {
-  transform: translateY(20px);
-  opacity: 0;
+  transform: translateY(100%);
 }
 
-@media (max-width: 768px) {
+// 桌面端居中显示
+@media (min-width: 769px) {
+  .modal-overlay {
+    align-items: center;
+  }
   .modal-content {
-    max-width: 100%;
-    border-radius: 16px 16px 0 0;
-    margin-top: auto;
+    border-radius: 20px;
+    max-height: 90vh;
   }
 }
 </style>

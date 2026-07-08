@@ -184,50 +184,51 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格月视图
 .month-calendar {
   display: flex;
   flex-direction: column;
   gap: 0;
+  background: #F2F2F7;
 }
 
 .month-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: var(--calendar-header-bg);
+  background: #FFFFFF;
   text-align: center;
-  padding: 12px 0;
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-secondary);
+  padding: 10px 0;
+  font-weight: 500;
+  font-size: 13px;
+  color: #8E8E93;
 }
 
 .weekday-title {
-  padding: 8px;
+  padding: 6px;
 }
 
 .month-view {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
-  background: var(--border-color);
-  border-radius: 0 0 8px 8px;
+  background: #E5E5EA;
 }
 
 .day-cell {
   min-height: 100px;
   padding: 8px;
-  background: var(--bg-secondary);
+  background: #FFFFFF;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 
-  &:hover {
-    background: var(--bg-hover);
+  &:active {
+    background: #E5E5EA;
   }
 
   &.today {
-    background: var(--calendar-today-bg);
+    background: rgba(0, 122, 255, 0.08);
     .day-number {
-      background: var(--color-work);
+      background: #007AFF;
       color: white;
       border-radius: 50%;
       width: 28px;
@@ -240,14 +241,13 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
   }
 
   &.selected {
-    background: var(--calendar-selected-bg);
-    border: 2px solid var(--color-work);
+    background: rgba(0, 122, 255, 0.15);
   }
 
   &.otherMonth {
-    opacity: 0.3;
+    background: #F2F2F7;
     .day-number {
-      color: var(--text-tertiary);
+      color: #C7C7CC;
     }
   }
 }
@@ -261,7 +261,7 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 .day-number {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: #1A1A1A;
 }
 
 .day-tasks {
@@ -273,12 +273,12 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 
 .more-tasks {
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: #8E8E93;
   cursor: pointer;
   padding: 2px 4px;
 
-  &:hover {
-    color: var(--color-work);
+  &:active {
+    color: #007AFF;
   }
 }
 
@@ -290,6 +290,10 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 
   .day-tasks {
     display: none;
+  }
+
+  .day-number {
+    font-size: 13px;
   }
 }
 </style>

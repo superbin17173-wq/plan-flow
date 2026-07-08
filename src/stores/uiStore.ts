@@ -14,6 +14,9 @@ export const useUiStore = defineStore('ui', () => {
   const showBulkDialog = ref(false)
   const showProfileDialog = ref(false)
   const showMealLog = ref(false)
+  const showAiChat = ref(false)
+  const activeAiSessionId = ref<string | null>(null) // 当前 AI 会话 ID
+  const aiSystemPromptExtra = ref<string | null>(null) // 额外的 system prompt
   const searchQuery = ref('')
   const filterCategory = ref<string | null>(null)
   const filterPriority = ref<string | null>(null)
@@ -154,6 +157,17 @@ export const useUiStore = defineStore('ui', () => {
   function openMealLog() { showMealLog.value = true }
   function closeMealLog() { showMealLog.value = false }
 
+  function openAiChat(sessionId?: string, systemPromptExtra?: string) {
+    showAiChat.value = true
+    if (sessionId) activeAiSessionId.value = sessionId
+    else activeAiSessionId.value = null
+    if (systemPromptExtra) aiSystemPromptExtra.value = systemPromptExtra
+    else aiSystemPromptExtra.value = null
+  }
+  function closeAiChat() {
+    showAiChat.value = false
+  }
+
   return {
     currentView,
     selectedDate,
@@ -165,6 +179,9 @@ export const useUiStore = defineStore('ui', () => {
     showBulkDialog,
     showProfileDialog,
     showMealLog,
+    showAiChat,
+    activeAiSessionId,
+    aiSystemPromptExtra,
     searchQuery,
     filterCategory,
     filterPriority,
@@ -189,6 +206,8 @@ export const useUiStore = defineStore('ui', () => {
     closeProfileDialog,
     openMealLog,
     closeMealLog,
+    openAiChat,
+    closeAiChat,
     getViewTitle,
   }
 })

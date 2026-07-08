@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
+import { ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
@@ -35,32 +36,33 @@ const viewTitle = computed(() => {
   }
 })
 
-// 导航
-function goPrev() {
-  uiStore.goPrev()
-}
+const themeIcon = computed(() => {
+  switch (settingStore.settings.theme) {
+    case 'light': return '☀️'
+    case 'dark': return '🌙'
+    case 'auto': return '🔄'
+    default: return '☀️'
+  }
+})
 
-function goNext() {
-  uiStore.goNext()
-}
+function goPrev() { uiStore.goPrev() }
+function goNext() { uiStore.goNext() }
+function goToday() { uiStore.goToday() }
 
-function goToday() {
-  uiStore.goToday()
-}
-
-// 新建任务
 function openTaskForm() {
   uiStore.openTaskForm(undefined, uiStore.selectedDate)
 }
 
-// 搜索
-function toggleSearch() {
-  uiStore.toggleSearchPanel()
-}
+function toggleSearch() { uiStore.toggleSearchPanel() }
+function toggleStats() { uiStore.toggleStatsPanel() }
 
-// 统计
-function toggleStats() {
-  uiStore.toggleStatsPanel()
+function handleMenuCommand(cmd: string) {
+  switch (cmd) {
+    case 'bulk': uiStore.openBulkDialog(); break
+    case 'stats': toggleStats(); break
+    case 'settings': showSettings.value = true; break
+    case 'theme': settingStore.toggleTheme(); break
+  }
 }
 </script>
 
@@ -69,13 +71,9 @@ function toggleStats() {
     <div class="header-left">
       <h1 class="app-title">PlanFlow</h1>
       <div class="nav-group">
-        <button class="nav-btn" @click="goPrev">
-          <span>‹</span>
-        </button>
+        <button class="nav-btn" @click="goPrev" aria-label="上一页">‹</button>
         <button class="nav-btn today" @click="goToday">今天</button>
-        <button class="nav-btn" @click="goNext">
-          <span>›</span>
-        </button>
+        <button class="nav-btn" @click="goNext" aria-label="下一页">›</button>
       </div>
       <span class="view-title">{{ viewTitle }}</span>
     </div>
@@ -85,41 +83,57 @@ function toggleStats() {
     </div>
 
     <div class="header-right">
+      <!-- 移动端只显示: + 🔍 ⋯ ; 桌面端显示全部 -->
       <button class="action-btn" @click="openTaskForm" title="新建任务">
         <span>+</span>
-      </button>
-      <button class="action-btn" @click="uiStore.openBulkDialog()" title="批量/导入">
-        <span>📥</span>
       </button>
       <button class="action-btn" @click="toggleSearch" title="搜索">
         <span>🔍</span>
       </button>
-      <button class="action-btn" @click="toggleStats" title="统计">
+
+      <!-- 桌面端才显示的按钮 -->
+      <button class="action-btn desktop-only" @click="uiStore.openBulkDialog()" title="批量/导入">
+        <span>📥</span>
+      </button>
+      <button class="action-btn desktop-only" @click="toggleStats" title="统计">
         <span>📊</span>
       </button>
-      <button class="action-btn" @click="showSettings = true" title="设置">
+      <button class="action-btn desktop-only" @click="showSettings = true" title="设置">
         <span>⚙️</span>
       </button>
-      <ThemeToggle />
+      <ThemeToggle class="desktop-only" />
+
+      <!-- 移动端才显示的溢出菜单 -->
+      <ElDropdown class="mobile-only" trigger="click" @command="handleMenuCommand" placement="bottom-end">
+        <button class="action-btn overflow-btn" title="更多">
+          <span>⋯</span>
+        </button>
+        <template #dropdown>
+          <ElDropdownMenu>
+            <ElDropdownItem command="bulk">📥 批量 / 导入</ElDropdownItem>
+            <ElDropdownItem command="stats">📊 统计</ElDropdownItem>
+            <ElDropdownItem command="settings">⚙️ 设置</ElDropdownItem>
+            <ElDropdownItem command="theme">{{ themeIcon }} 主题切换</ElDropdownItem>
+          </ElDropdownMenu>
+        </template>
+      </ElDropdown>
     </div>
 
-    <!-- 统计面板 -->
     <StatsPanel v-if="uiStore.showStatsPanel" />
-
-    <!-- 设置面板 -->
     <SettingsPanel v-model="showSettings" />
   </header>
 </template>
 
 <style scoped lang="scss">
+// iOS 风格顶部导航
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #F2F2F7;
+  border-bottom: 1px solid #E5E5EA;
+  flex-wrap: nowrap;
   gap: 12px;
   position: sticky;
   top: 0;
@@ -129,13 +143,15 @@ function toggleStats() {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .app-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-work);
+  color: #007AFF;
+  white-space: nowrap;
 }
 
 .nav-group {
@@ -144,31 +160,30 @@ function toggleStats() {
 }
 
 .nav-btn {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: transparent;
+  color: #007AFF;
   font-size: 16px;
   transition: all 0.2s;
+  white-space: nowrap;
 
-  &:hover {
-    background: var(--bg-hover);
-  }
+  &:active { opacity: 0.7; }
 
   &.today {
-    font-size: 14px;
-    background: var(--color-work);
+    font-size: 15px;
+    background: #007AFF;
     color: white;
-
-    &:hover {
-      filter: brightness(1.1);
-    }
+    padding: 8px 16px;
+    font-weight: 500;
   }
 }
 
 .view-title {
-  font-size: 16px;
-  color: var(--text-primary);
+  font-size: 17px;
+  font-weight: 600;
+  color: #1A1A1A;
+  white-space: nowrap;
 }
 
 .header-center {
@@ -180,47 +195,85 @@ function toggleStats() {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .action-btn {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 16px;
+  border-radius: 10px;
+  background: transparent;
+  color: #007AFF;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
 
-  &:hover {
-    background: var(--bg-hover);
-    color: var(--color-work);
+  &:active {
+    opacity: 0.6;
   }
 }
+
+.mobile-only { display: none; }
+.desktop-only { display: flex; }
 
 @media (max-width: 768px) {
   .app-header {
     padding: 10px 12px;
+    gap: 6px;
+    background: #F2F2F7;
   }
 
-  .header-left {
-    gap: 8px;
-  }
-
-  .app-title {
-    font-size: 16px;
-  }
+  .header-left { gap: 8px; }
+  .app-title { display: none; }
 
   .view-title {
-    display: none;
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  .nav-group { gap: 4px; }
+  .nav-btn {
+    padding: 6px 10px;
+    font-size: 15px;
+
+    &.today {
+      font-size: 14px;
+      padding: 7px 14px;
+    }
   }
 
   .header-center {
-    order: 3;
-    width: 100%;
-    justify-content: center;
+    :deep(.view-switcher) {
+      background: #FFFFFF;
+      border-radius: 8px;
+      padding: 2px;
+    }
+    :deep(.view-btn) {
+      padding: 6px 12px;
+      font-size: 14px;
+      color: #1A1A1A;
+
+      &.active {
+        background: #007AFF;
+        color: white;
+      }
+    }
   }
+
+  .header-right { gap: 4px; }
+
+  .action-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 16px;
+    color: #007AFF;
+  }
+
+  .mobile-only { display: flex; }
+  .desktop-only { display: none !important; }
 }
 </style>

@@ -339,4 +339,44 @@ function clearFilters() {
     pointer-events: auto;
   }
 }
+
+@media (max-width: 768px) {
+  .search-filters {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .filter-group {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    label { display: none; }
+  }
+
+  .filter-select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .clear-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .search-input {
+    font-size: 16px; // avoid iOS zoom-on-focus
+  }
+
+  .close-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .search-results {
+    max-height: calc(100vh - 200px);
+  }
+}
 </style>

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import { useAIChat } from '../../composables/useAIChat'
+import { useUiStore } from '../../stores/uiStore'
 import type { AIMessage } from '../../types'
 import dayjs from 'dayjs'
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
+
+const uiStore = useUiStore()
 
 const {
   messages,
@@ -13,11 +16,13 @@ const {
   currentError,
   storageMB,
   pendingDelete,
+  currentSessionId,
   initChat,
   sendMessage,
   sendImage,
   clearAll,
   resolveDeleteConfirm,
+  switchSession,
 } = useAIChat()
 
 const input = ref('')
@@ -41,7 +46,14 @@ async function scrollToBottom() {
 
 watch(isOpen, async open => {
   if (open) {
-    await initChat()
+    // 如果 uiStore 指定了特定会话，切换到它
+    const sessionId = uiStore.activeAiSessionId
+    const extra = uiStore.aiSystemPromptExtra
+    if (sessionId && sessionId !== currentSessionId.value) {
+      await switchSession(sessionId, extra || undefined)
+    } else {
+      await initChat()
+    }
     await scrollToBottom()
   }
 })

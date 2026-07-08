@@ -159,8 +159,9 @@ function categoryColor(id: string): string {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格年周视图
 .year-week-view {
-  background: var(--bg-secondary);
+  background: #FFFFFF;
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -178,43 +179,44 @@ function categoryColor(id: string): string {
 
 .nav-buttons { display: flex; gap: 8px; }
 .nav-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 16px;
-  &:hover { background: var(--bg-hover); }
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: #007AFF;
+  font-size: 17px;
+  &:active { opacity: 0.6; }
   &.today-btn {
     width: auto;
-    padding: 0 14px;
-    border-radius: 8px;
-    background: var(--color-work);
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: #007AFF;
     color: white;
-    font-size: 13px;
+    font-size: 15px;
+    font-weight: 500;
   }
 }
 
 .yw-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #1A1A1A;
 }
 
 .legend {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--text-tertiary);
+  font-size: 13px;
+  color: #8E8E93;
 }
 .legend-dot {
   width: 10px;
   height: 10px;
   border-radius: 3px;
   margin-left: 8px;
-  &.current { background: var(--color-work); }
-  &.past { background: var(--text-tertiary); opacity: 0.5; }
+  &.current { background: #007AFF; }
+  &.past { background: #C7C7CC; }
 }
 
 .months-container {
@@ -234,7 +236,7 @@ function categoryColor(id: string): string {
   flex-shrink: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #1A1A1A;
   padding-top: 6px;
   text-align: right;
 }
@@ -247,27 +249,22 @@ function categoryColor(id: string): string {
 }
 
 .week-cell {
-  background: var(--bg-primary);
-  border-radius: 10px;
-  padding: 8px 10px;
+  background: #F2F2F7;
+  border-radius: 12px;
+  padding: 10px 12px;
   text-align: left;
-  transition: all 0.2s;
-  border: 2px solid transparent;
   min-height: 76px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
 
-  &:hover {
-    background: var(--bg-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+  &:active {
+    background: #E5E5EA;
   }
 
   &.current {
-    border-color: var(--color-work);
-    background: var(--calendar-today-bg);
+    background: rgba(0, 122, 255, 0.1);
   }
 
   &.past {
@@ -286,23 +283,23 @@ function categoryColor(id: string): string {
 }
 
 .wc-num {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: #8E8E93;
 }
 
 .wc-count {
-  background: var(--color-work);
+  background: #007AFF;
   color: white;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .wc-range {
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: #C7C7CC;
   font-family: monospace;
 }
 
@@ -318,21 +315,20 @@ function categoryColor(id: string): string {
 
 .wc-progress {
   height: 3px;
-  background: var(--border-color);
-  border-radius: 999px;
+  background: #E5E5EA;
+  border-radius: 3px;
   overflow: hidden;
   margin-top: auto;
 }
 .wc-progress-bar {
   height: 100%;
-  background: var(--color-study);
-  transition: width 0.3s;
+  background: #34C759;
 }
 
 @media (max-width: 640px) {
   .month-group { flex-direction: column; align-items: stretch; gap: 6px; }
   .month-label { width: auto; text-align: left; padding-top: 0; }
   .weeks-row { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
-  .week-cell { min-height: 68px; padding: 6px 8px; }
+  .week-cell { min-height: 68px; padding: 8px 10px; }
 }
 </style>

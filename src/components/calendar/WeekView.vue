@@ -167,18 +167,19 @@ function endDrag() {
 </template>
 
 <style scoped lang="scss">
+// iOS 风格周视图
 .week-calendar {
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  border-radius: 8px;
+  background: #FFFFFF;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .week-header {
   display: flex;
-  background: var(--calendar-header-bg);
-  border-bottom: 1px solid var(--border-color);
+  background: #F2F2F7;
+  border-bottom: 1px solid #E5E5EA;
 }
 
 .time-header {
@@ -186,7 +187,7 @@ function endDrag() {
   flex-shrink: 0;
   padding: 12px 8px;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: #8E8E93;
   text-align: center;
 }
 
@@ -195,37 +196,38 @@ function endDrag() {
   padding: 12px 8px;
   text-align: center;
   cursor: pointer;
-  transition: background 0.2s;
 
-  &:hover {
-    background: var(--bg-hover);
+  &:active {
+    background: #E5E5EA;
   }
 
   &.today {
-    background: var(--calendar-today-bg);
-    color: var(--color-work);
+    background: rgba(0, 122, 255, 0.08);
 
     .day-date {
-      background: var(--color-work);
+      background: #007AFF;
       color: white;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      font-weight: 600;
     }
   }
 }
 
 .weekday-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
+  color: #8E8E93;
 }
 
 .day-date {
-  font-size: 14px;
+  font-size: 15px;
   margin-top: 4px;
+  color: #1A1A1A;
 }
 
 .week-body {
@@ -237,8 +239,8 @@ function endDrag() {
 .time-axis {
   width: 60px;
   flex-shrink: 0;
-  background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  background: #F2F2F7;
+  border-right: 1px solid #E5E5EA;
   display: flex;
   flex-direction: column;
 }
@@ -252,8 +254,8 @@ function endDrag() {
   padding-top: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
+  color: #8E8E93;
+  border-bottom: 1px solid #E5E5EA;
   box-sizing: border-box;
 }
 
@@ -265,13 +267,8 @@ function endDrag() {
 .day-column {
   flex: 1;
   position: relative;
-  border-right: 1px solid var(--border-color);
-  min-height: 1440px; // 24 * 60px
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.02);
-  }
+  border-right: 1px solid #E5E5EA;
+  min-height: 1440px;
 
   &:last-child {
     border-right: none;
@@ -289,26 +286,22 @@ function endDrag() {
 .hour-slot {
   height: 60px;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #E5E5EA;
   pointer-events: auto;
-  transition: background 0.2s;
   box-sizing: border-box;
 
-  &:hover {
-    background: rgba(129, 201, 216, 0.1);
+  &:active {
+    background: rgba(0, 122, 255, 0.08);
   }
 
   &.past {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(0, 0, 0, 0.03);
     cursor: not-allowed;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
   }
 }
 
 @media (max-width: 768px) {
-  // 保持与 PC 一致的尺寸和字号，仅在此断点做微调按需扩展
+  .weekday-name { font-size: 11px; }
+  .day-date { font-size: 13px; }
 }
 </style>

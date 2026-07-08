@@ -350,11 +350,11 @@ export async function executeTool(
   }
 }
 
-// 生成 system prompt
-export function buildSystemPrompt(): string {
+// 生成 system prompt（支持注入额外内容）
+export function buildSystemPrompt(extra?: string): string {
   const today = dayjs().format('YYYY-MM-DD (dddd)')
   const cats = DEFAULT_CATEGORIES.map(c => `${c.id}(${c.name})`).join(', ')
-  return `你是 PlanFlow 的智能日程助手。用户会用自然语言告诉你想安排什么，你需要理解意图并调用相应的工具来完成。
+  const base = `你是 PlanFlow 的智能日程助手。用户会用自然语言告诉你想安排什么，你需要理解意图并调用相应的工具来完成。
 
 今天是 ${today}。
 可用分类: ${cats}
@@ -369,4 +369,9 @@ export function buildSystemPrompt(): string {
 7. 记录饮食用 addMeal。用户没说 mealType 时，根据时间推断（早/中/晚/加餐）。
 8. 简洁友好，操作完成后用一两句话告知用户结果。不要输出 JSON 或工具调用细节。
 9. 如果用户请求含糊（比如没说日期、时间），先问清再操作，不要瞎猜。`
+
+  if (extra) {
+    return base + `\n\n--- 学习会话额外信息 ---\n${extra}`
+  }
+  return base
 }

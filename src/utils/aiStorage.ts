@@ -1,12 +1,14 @@
 // AI 对话本地存储（IndexedDB）
 import { getDB } from './db'
 import type { AIMessage } from '../types'
+import { DEFAULT_SESSION_ID } from '../types/ai'
 
 const MB = 1024 * 1024
 
-// 保存消息
+// 保存消息（确保有 sessionId）
 export async function saveAIMessage(msg: AIMessage): Promise<void> {
   const db = await getDB()
+  if (!msg.sessionId) msg.sessionId = DEFAULT_SESSION_ID
   await db.put('ai_messages', msg)
 }
 
@@ -15,6 +17,7 @@ export async function saveAIMessages(msgs: AIMessage[]): Promise<void> {
   const db = await getDB()
   const tx = db.transaction('ai_messages', 'readwrite')
   for (const m of msgs) {
+    if (!m.sessionId) m.sessionId = DEFAULT_SESSION_ID
     await tx.store.put(m)
   }
   await tx.done
@@ -23,13 +26,40 @@ export async function saveAIMessages(msgs: AIMessage[]): Promise<void> {
 // 获取全部消息（按时间升序）
 export async function getAllAIMessages(): Promise<AIMessage[]> {
   const db = await getDB()
-  return db.getAllFromIndex('ai_messages', 'by-createdAt')
+  const msgs = await db.getAllFromIndex('ai_messages', 'by-createdAt')
+  // 为老数据补充 sessionId
+  return msgs.map(m => ({ ...m, sessionId: m.sessionId || DEFAULT_SESSION_ID }))
+}
+
+// 获取指定会话的消息
+export async function getMessagesBySession(sessionId: string): Promise<AIMessage[]> {
+  const db = await getDB()
+  try {
+    // 尝试用索引查询
+    const msgs = await db.getAllFromIndex('ai_messages', 'by-session', sessionId)
+    return msgs.sort((a, b) => a.createdAt - b.createdAt)
+  } catch {
+    // 索引不存在时 fallback 到内存过滤
+    const all = await getAllAIMessages()
+    return all.filter(m => m.sessionId === sessionId)
+  }
 }
 
 // 清空全部对话
 export async function clearAIMessages(): Promise<void> {
   const db = await getDB()
   await db.clear('ai_messages')
+}
+
+// 清空指定会话
+export async function clearSessionMessages(sessionId: string): Promise<void> {
+  const db = await getDB()
+  const msgs = await getMessagesBySession(sessionId)
+  const tx = db.transaction('ai_messages', 'readwrite')
+  for (const m of msgs) {
+    await tx.store.delete(m.id)
+  }
+  await tx.done
 }
 
 // 估算总字节数

@@ -90,6 +90,21 @@ const workoutSummary = computed(() => {
   return { exCount: w.length, setCount, volume: Math.round(volume), kcal }
 })
 
+// 学习任务摘要
+const isReviewTask = computed(() => {
+  return (props.task.study?.ebbinghaus?.reviewIndex ?? 0) > 0
+})
+const studySummary = computed(() => {
+  const s = props.task.study
+  if (!s) return null
+  const eb = s.ebbinghaus
+  if (eb) {
+    const reviewText = eb.reviewIndex === 0 ? '首次学习' : `第 ${eb.reviewIndex} 次复习`
+    return `📚 ${s.subject} · ${reviewText}`
+  }
+  return `📚 ${s.subject}`
+})
+
 // 拖拽处理
 let dragStartY = 0
 let dragOrigStartMin = 0
@@ -194,11 +209,14 @@ function handleMouseUp() {
     @mousedown="handleMouseDown"
   >
     <div class="task-title">
-      <span v-if="workoutSummary" class="workout-icon">💪</span>{{ task.title }}
+      <span v-if="workoutSummary" class="workout-icon">💪</span><span v-if="isReviewTask" class="review-icon">🔁</span>{{ task.title }}
     </div>
     <div class="task-time">{{ timeDisplay }}</div>
     <div v-if="workoutSummary" class="task-workout">
       {{ workoutSummary.exCount }} 动作 · {{ workoutSummary.setCount }} 组<span v-if="workoutSummary.volume > 0"> · {{ workoutSummary.volume }}kg</span><span v-if="workoutSummary.kcal > 0"> · 🔥 {{ workoutSummary.kcal }}kcal</span>
+    </div>
+    <div v-else-if="studySummary" class="task-workout">
+      {{ studySummary }}
     </div>
     <!-- 拖拽调整指示器 -->
     <div class="resize-handle" v-if="!task.isCompleted && !isPast"></div>
@@ -258,8 +276,8 @@ function handleMouseUp() {
 }
 
 .task-title {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -275,11 +293,10 @@ function handleMouseUp() {
   font-size: 12px;
   opacity: 0.9;
   margin-top: 4px;
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 4px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
   display: inline-block;
-  font-family: monospace;
 }
 
 .workout-icon {
@@ -293,6 +310,6 @@ function handleMouseUp() {
   right: 0;
   height: 10px;
   cursor: ns-resize;
-  background: linear-gradient(to top, rgba(0,0,0,0.2), transparent);
+  background: linear-gradient(to top, rgba(0,0,0,0.15), transparent);
 }
 </style>

@@ -1,9 +1,11 @@
 // OTA 远程更新模块
 // 原理：APP启动时检查服务器 version.json，有新版本则下载 dist.zip 到本地并热更新
 
-import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
 import JSZip from 'jszip'
 import { Preferences } from '@capacitor/preferences'
+import { Capacitor } from '@capacitor/core'
+import { APP_VERSION } from './version'
 
 // 更新服务器地址（Cloudflare Pages）
 const UPDATE_SERVER = 'https://planflow-aot.pages.dev'
@@ -18,44 +20,35 @@ export interface UpdateInfo {
   localVersion: string
 }
 
-// 读取本地缓存的版本号
-async function getLocalVersion(): Promise<string> {
-  const { value } = await Preferences.get({ key: 'ota_version' })
-  return value || '0.0.0'
-}
-
-// 保存本地版本号
-async function setLocalVersion(version: string) {
-  await Preferences.set({ key: 'ota_version', value: version })
-}
-
-// 检查是否有更新
+// 检查是否有更新（使用打包时的版本号 APP_VERSION）
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
     const res = await fetch(`${UPDATE_SERVER}${VERSION_PATH}`, {
       cache: 'no-store',
     })
-    if (!res.ok) return { version: '', buildTime: '', hasUpdate: false, localVersion: await getLocalVersion() }
+    if (!res.ok) return { version: '', buildTime: '', hasUpdate: false, localVersion: APP_VERSION }
 
     const remote = await res.json()
-    const localVersion = await getLocalVersion()
     const remoteVersion = remote.version || '0.0.0'
+
+    // 比较远程版本和打包时的版本号
+    const hasUpdate = remoteVersion !== APP_VERSION
 
     return {
       version: remoteVersion,
       buildTime: remote.buildTime || '',
-      hasUpdate: remoteVersion !== localVersion,
-      localVersion,
+      hasUpdate,
+      localVersion: APP_VERSION,
     }
   } catch {
-    return { version: '', buildTime: '', hasUpdate: false, localVersion: await getLocalVersion() }
+    return { version: '', buildTime: '', hasUpdate: false, localVersion: APP_VERSION }
   }
 }
 
 // 下载并安装更新
 export async function downloadAndUpdate(
   onProgress?: (percent: number) => void
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     // 下载 zip（添加超时和错误处理）
     console.log('OTA: 开始下载', `${UPDATE_SERVER}${DIST_ZIP_PATH}`)
@@ -69,38 +62,46 @@ export async function downloadAndUpdate(
 
     if (!res.ok) {
       console.error('OTA: 下载失败，HTTP', res.status)
-      return false
+      return { success: false, error: `下载失败: HTTP ${res.status}` }
     }
 
     const total = Number(res.headers.get('content-length')) || 0
-    const reader = res.body?.getReader()
-    if (!reader) return false
+    if (total === 0) {
+      console.log('OTA: content-length 未知，直接下载完整文件')
+    }
 
-    // 分块读取并显示进度
-    const chunks: Uint8Array[] = []
-    let received = 0
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.length
-      if (onProgress && total > 0) {
-        onProgress(Math.round((received / total) * 100))
+    // Android WebView 可能不支持 ReadableStream，直接用 arrayBuffer
+    console.log('OTA: 开始读取响应体...')
+    let arrayBuffer: ArrayBuffer
+    try {
+      arrayBuffer = await res.arrayBuffer()
+    } catch (streamErr) {
+      console.error('OTA: arrayBuffer 读取失败，尝试 blob 方式', streamErr)
+      // fallback: blob -> arrayBuffer
+      try {
+        const blob = await res.blob()
+        arrayBuffer = await blob.arrayBuffer()
+      } catch (blobErr) {
+        console.error('OTA: blob 方式也失败', blobErr)
+        return { success: false, error: '下载失败: 无法读取响应数据' }
       }
     }
 
-    // 合并为完整 ArrayBuffer
-    const zipBuffer = new Uint8Array(received)
-    let offset = 0
-    for (const chunk of chunks) {
-      zipBuffer.set(chunk, offset)
-      offset += chunk.length
-    }
+    const zipBuffer = new Uint8Array(arrayBuffer)
+    console.log('OTA: 下载完成，大小', zipBuffer.length, '字节')
+    onProgress?.(30)
 
     // 解压
-    const zip = await JSZip.loadAsync(zipBuffer)
+    console.log('OTA: 开始解压...')
+    let zip: JSZip
+    try {
+      zip = await JSZip.loadAsync(zipBuffer)
+    } catch (zipErr) {
+      console.error('OTA: ZIP 解压失败', zipErr)
+      return { success: false, error: '更新包解压失败，请重试' }
+    }
     const files = Object.keys(zip.files)
+    console.log('OTA: ZIP 包含', files.length, '个文件')
 
     // 先清理旧目录
     try {
@@ -109,19 +110,32 @@ export async function downloadAndUpdate(
       // 目录不存在，忽略
     }
 
+    onProgress?.(50)
+
     // 解压每个文件
+    let fileIndex = 0
     for (const filePath of files) {
       const file = zip.files[filePath]
       if (file.dir) continue
+      fileIndex++
 
-      const content = await file.async('string')
+      // 将 Windows 反斜杠转为正斜杠
+      const normalizedPath = filePath.replace(/\\/g, '/')
+
+      // 判断是否是文本文件（JS、CSS、HTML、JSON、SVG 等）
+      const isTextFile = /\.(js|css|html|json|svg|txt|md|map)$/i.test(normalizedPath)
+
+      // 使用合适的方式读取文件内容
+      const content = isTextFile
+        ? await file.async('string')
+        : await file.async('base64')
 
       // 确保父目录存在
-      const parts = filePath.split('/')
+      const parts = normalizedPath.split('/')
       if (parts.length > 1) {
-        let currentPath = ''
+        let currentPath = LOCAL_DIR
         for (let i = 0; i < parts.length - 1; i++) {
-          currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i]
+          currentPath = `${currentPath}/${parts[i]}`
           try {
             await Filesystem.mkdir({ path: currentPath, directory: Directory.Data, recursive: true })
           } catch {
@@ -130,24 +144,56 @@ export async function downloadAndUpdate(
         }
       }
 
-      await Filesystem.writeFile({
-        path: filePath,
-        data: content,
-        directory: Directory.Data,
-        recursive: true,
-      })
+      try {
+        await Filesystem.writeFile({
+          path: `${LOCAL_DIR}/${normalizedPath}`,
+          data: content,
+          directory: Directory.Data,
+          recursive: true,
+          encoding: isTextFile ? Encoding.UTF8 : undefined,
+        })
+      } catch (writeErr) {
+        console.error('OTA: 写入文件失败', normalizedPath, writeErr)
+        return { success: false, error: `写入文件失败: ${normalizedPath}` }
+      }
+
+      // 更新进度 (50-90%)
+      onProgress?.(50 + Math.round((fileIndex / files.length) * 40))
     }
 
-    // 保存版本号
-    const versionRes = await fetch(`${UPDATE_SERVER}${VERSION_PATH}`)
-    if (versionRes.ok) {
-      const versionData = await versionRes.json()
-      await setLocalVersion(versionData.version || '0.0.0')
-    }
+    console.log('OTA: 文件写入完成')
 
-    return true
+    onProgress?.(100)
+    return { success: true }
   } catch (err) {
     console.error('OTA更新失败:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg || '未知错误' }
+  }
+}
+
+// 获取更新后的 index.html URI（用于加载）
+export async function getUpdateIndexPath(): Promise<string | null> {
+  try {
+    const result = await Filesystem.getUri({
+      path: `${LOCAL_DIR}/index.html`,
+      directory: Directory.Data,
+    })
+    return result.uri
+  } catch {
+    return null
+  }
+}
+
+// 检查是否有已下载的更新
+export async function hasDownloadedUpdate(): Promise<boolean> {
+  try {
+    await Filesystem.stat({
+      path: `${LOCAL_DIR}/index.html`,
+      directory: Directory.Data,
+    })
+    return true
+  } catch {
     return false
   }
 }

@@ -13,6 +13,7 @@ export interface AIToolCall {
 
 export interface AIMessage {
   id: string // 前端生成的 UUID
+  sessionId: string // 会话 ID（多会话架构）
   role: AIRole
   content: string
   tool_calls?: AIToolCall[] // assistant 消息可能带工具调用
@@ -25,3 +26,6 @@ export interface AIMessage {
   pending?: boolean
   error?: string
 }
+
+// 默认全局会话 ID
+export const DEFAULT_SESSION_ID = 'default'

@@ -26,6 +26,9 @@ export interface Settings {
   doubaoEnabled: boolean
   doubaoApiKey: string
   doubaoModel: string // 用户在火山方舟创建的接入点 ID (ep-xxxxx) 或模型名
+  // 睡眠时间（用于时间统计）
+  sleepStartTime: string // HH:mm，默认 23:00
+  sleepEndTime: string // HH:mm，默认 07:00
 }
 
 // 默认设置
@@ -35,7 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultCategory: 'work',
   weekStartsOn: 1,
   timeFormat: '24h',
-  notificationsEnabled: false, // 默认关闭全局推送,任务默认不提醒;需要单独开启的任务在表单里手动打开
+  notificationsEnabled: false,
   defaultRemindAt: 15,
   pushplusEnabled: false,
   pushplusToken: '',
@@ -52,4 +55,6 @@ export const DEFAULT_SETTINGS: Settings = {
   doubaoEnabled: false,
   doubaoApiKey: '',
   doubaoModel: '',
+  sleepStartTime: '23:00',
+  sleepEndTime: '07:00',
 }

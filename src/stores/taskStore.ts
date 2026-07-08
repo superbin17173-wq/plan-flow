@@ -64,6 +64,7 @@ export const useTaskStore = defineStore('task', () => {
       recurrence: formData.recurrence,
       remindAt: formData.remindAt,
       workout: formData.workout,
+      study: formData.study,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -91,8 +92,149 @@ export const useTaskStore = defineStore('task', () => {
       }
     }
 
+    // 处理学习任务的艾宾浩斯复习计划
+    if (task.study && (task.study as any).__enableEbbinghaus) {
+      await generateEbbinghausReviews(task)
+    }
+
     return task
   }
+
+  // 根据首学任务生成后续复习任务链
+  async function generateEbbinghausReviews(originTask: Task): Promise<void> {
+    if (!originTask.study) return
+    const { initialReviewSchedule, addDays: _ } = await import('../utils/sm2')
+    const { defaultSM2State } = await import('../types/study')
+
+    const studyGroupId = uuidv4()
+    const aiSessionId = uuidv4() // 所有复习任务共享同一个 AI 会话
+    const reviewDates = initialReviewSchedule(originTask.date, 5)
+
+    // 更新原任务的 study.ebbinghaus 字段
+    const originIndex = tasks.value.findIndex(t => t.id === originTask.id)
+    if (originIndex >= 0) {
+      const study = { ...originTask.study }
+      delete (study as any).__enableEbbinghaus
+      study.ebbinghaus = {
+        enabled: true,
+        studyGroupId,
+        originTaskId: originTask.id,
+        reviewIndex: 0,
+        sm2: defaultSM2State(),
+        masteryHistory: [],
+        aiSessionId,
+      }
+      const updated: Task = { ...tasks.value[originIndex], study, updatedAt: Date.now() }
+      await dbUpdateTask(updated)
+      tasks.value[originIndex] = updated
+    }
+
+    // 生成后续复习任务
+    for (let i = 0; i < reviewDates.length; i++) {
+      const reviewTask: Task = {
+        id: uuidv4(),
+        title: `🔁 复习:${originTask.study.subject}`,
+        description: `第 ${i + 1} 次复习(首学于 ${originTask.date})`,
+        category: 'study',
+        priority: 'medium',
+        date: reviewDates[i],
+        startTime: originTask.startTime,
+        endTime: originTask.endTime,
+        color: getCategoryColor('study'),
+        isCompleted: false,
+        study: {
+          subject: originTask.study.subject,
+          materialText: originTask.study.materialText,
+          materialFileName: originTask.study.materialFileName,
+          ebbinghaus: {
+            enabled: true,
+            studyGroupId,
+            originTaskId: originTask.id,
+            reviewIndex: i + 1,
+            sm2: defaultSM2State(),
+            masteryHistory: [],
+            aiSessionId,
+          },
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+      await dbAddTask(reviewTask)
+      tasks.value.push(reviewTask)
+    }
+  }
+
+  // 提交一次复习评估:更新 SM-2 状态,调整下一次复习日期
+  async function submitReviewAssessment(
+    taskId: string,
+    mastery: import('../types/study').MasteryLevel,
+    aiReason?: string
+  ): Promise<void> {
+    const { sm2, addDays } = await import('../utils/sm2')
+    const { MASTERY_TO_QUALITY } = await import('../types/study')
+
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study?.ebbinghaus) return
+
+    const quality = MASTERY_TO_QUALITY[mastery]
+    const newSm2 = sm2(task.study.ebbinghaus.sm2, quality)
+    const record: import('../types/study').MasteryRecord = {
+      date: task.date,
+      level: mastery,
+      quality,
+      source: aiReason ? 'ai' : 'manual',
+      aiReason,
+    }
+
+    // 更新当前复习任务
+    const updated: Task = {
+      ...task,
+      isCompleted: true,
+      study: {
+        ...task.study,
+        ebbinghaus: {
+          ...task.study.ebbinghaus,
+          sm2: newSm2,
+          masteryHistory: [...task.study.ebbinghaus.masteryHistory, record],
+        },
+      },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+
+    // 调整下一次未完成的复习任务日期
+    const groupId = task.study.ebbinghaus.studyGroupId
+    const nextReview = tasks.value
+      .filter(t =>
+        t.study?.ebbinghaus?.studyGroupId === groupId &&
+        !t.isCompleted &&
+        t.id !== task.id
+      )
+      .sort((a, b) => a.date.localeCompare(b.date))[0]
+
+    if (nextReview) {
+      const newDate = addDays(task.date, newSm2.interval || 1)
+      const nextIdx = tasks.value.findIndex(t => t.id === nextReview.id)
+      const nextUpdated: Task = {
+        ...nextReview,
+        date: newDate,
+        study: {
+          ...nextReview.study!,
+          ebbinghaus: {
+            ...nextReview.study!.ebbinghaus!,
+            sm2: newSm2,
+          },
+        },
+        updatedAt: Date.now(),
+      }
+      await dbUpdateTask(nextUpdated)
+      tasks.value[nextIdx] = nextUpdated
+    }
+  }
+
 
   // 更新任务
   async function editTask(id: string, formData: Partial<TaskFormData>): Promise<Task | null> {
@@ -113,6 +255,7 @@ export const useTaskStore = defineStore('task', () => {
     if (formData.recurrence !== undefined) task.recurrence = formData.recurrence
     if (formData.remindAt !== undefined) task.remindAt = formData.remindAt
     if (formData.workout !== undefined) task.workout = formData.workout
+    if (formData.study !== undefined) task.study = formData.study
     task.updatedAt = Date.now()
 
     await dbUpdateTask(task)
@@ -249,6 +392,7 @@ export const useTaskStore = defineStore('task', () => {
     dragUpdateTaskTime,
     searchTasks,
     filterTasks,
+    submitReviewAssessment,
     todayStats,
     weekStats,
     monthStats,

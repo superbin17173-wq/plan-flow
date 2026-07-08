@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
 import type { Task } from '../../types'
 import { getCategoryById } from '../../types/category'
@@ -8,11 +8,16 @@ import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
 import { useHealthStore } from '../../stores/healthStore'
 import { calcTaskCalories, currentWeight } from '../../utils/calorie'
+import { MASTERY_LABELS } from '../../types/study'
+import ReviewDialog from './ReviewDialog.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
 const healthStore = useHealthStore()
+
+// 复习评估对话框
+const showReviewDialog = ref(false)
 
 // 当前任务
 const task = computed(() => {
@@ -157,6 +162,38 @@ const dateDisplay = computed(() => {
                 </div>
               </div>
 
+              <!-- 学习任务(学习分类 + 艾宾浩斯) -->
+              <div v-if="task.study" class="card-section study-section">
+                <div class="section-label">
+                  📚 学习内容
+                  <span v-if="task.study.ebbinghaus" class="study-badge">
+                    第 {{ task.study.ebbinghaus.reviewIndex }} 次{{ task.study.ebbinghaus.reviewIndex === 0 ? '学习' : '复习' }}
+                  </span>
+                </div>
+                <div class="study-subject">{{ task.study.subject }}</div>
+                <div v-if="task.study.materialFileName" class="study-file">
+                  📎 {{ task.study.materialFileName }}
+                </div>
+                <div
+                  v-if="task.study.materialText"
+                  class="study-material"
+                >{{ task.study.materialText.slice(0, 240) }}<span v-if="task.study.materialText.length > 240">…</span></div>
+                <div v-if="task.study.ebbinghaus && !task.isCompleted" class="study-actions">
+                  <button class="study-review-btn" @click="showReviewDialog = true">
+                    🔁 开始复习评估
+                  </button>
+                </div>
+                <div v-if="task.study.ebbinghaus?.masteryHistory?.length" class="study-history">
+                  <span class="section-label" style="font-size:12px">评估历史:</span>
+                  <span
+                    v-for="(h, i) in task.study.ebbinghaus.masteryHistory"
+                    :key="i"
+                    class="mastery-chip"
+                    :class="`mastery-${h.level}`"
+                  >{{ MASTERY_LABELS[h.level] }}</span>
+                </div>
+              </div>
+
               <!-- 训练动作(健身分类) -->
               <div v-if="task.workout && task.workout.length > 0" class="card-section workout-section">
                 <div class="section-label">
@@ -214,6 +251,7 @@ const dateDisplay = computed(() => {
         </Transition>
       </div>
     </Transition>
+    <ReviewDialog v-if="task && task.study?.ebbinghaus" v-model="showReviewDialog" :task="task" />
   </Teleport>
 </template>
 
@@ -333,6 +371,93 @@ const dateDisplay = computed(() => {
   font-size: 13px;
   color: var(--text-primary);
   font-weight: 500;
+}
+
+.study-section {
+  background: rgba(108, 155, 235, 0.06);
+  border: 1px solid rgba(108, 155, 235, 0.2);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+}
+
+.study-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: rgba(108, 155, 235, 0.18);
+  color: rgb(80, 130, 220);
+}
+
+.study-subject {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.study-file {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.study-material {
+  padding: 10px 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.study-review-btn {
+  padding: 10px 18px;
+  background: rgb(80, 130, 220);
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+}
+
+.study-history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mastery-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+
+  &.mastery-again { background: rgba(240, 100, 100, 0.15); color: rgb(200, 70, 70); }
+  &.mastery-hard  { background: rgba(240, 160, 60, 0.15); color: rgb(200, 130, 40); }
+  &.mastery-good  { background: rgba(80, 180, 100, 0.15); color: rgb(60, 150, 80); }
+  &.mastery-easy  { background: rgba(100, 155, 235, 0.15); color: rgb(80, 130, 220); }
 }
 
 .workout-badge {
