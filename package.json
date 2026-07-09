@@ -9,6 +9,7 @@
     "build:ota": "vue-tsc -b && vite build && node scripts/generate-ota.mjs",
     "ota:serve": "node scripts/ota-server.mjs",
     "deploy:ota": "npm run build:ota && wrangler pages deploy dist --project-name planflow",
+    "deploy:self": "npm run build:ota && scp -r dist/* root@117.72.77.147:/var/www/planflow/",
     "preview": "vite preview"
   },
   "dependencies": {

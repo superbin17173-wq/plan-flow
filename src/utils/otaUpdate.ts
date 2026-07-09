@@ -7,7 +7,7 @@ import { Preferences } from '@capacitor/preferences'
 import { Capacitor } from '@capacitor/core'
 import { APP_VERSION } from './version'
 
-// 更新服务器地址（Cloudflare Pages）
+// 更新服务器地址(Cloudflare Pages)
 const UPDATE_SERVER = 'https://planflow-aot.pages.dev'
 const VERSION_PATH = '/version.json'
 const DIST_ZIP_PATH = '/dist.zip'
