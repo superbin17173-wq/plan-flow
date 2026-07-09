@@ -84,23 +84,44 @@ bash scripts/build-apk/build.sh firewall
 
 ## 自定义 Skill：`deploy-ota`
 
-**用途**：一键部署 PlanFlow 前端代码到 Cloudflare Pages，实现手机 APP 远程热更新。
+**用途**：部署 PlanFlow 前端代码到 Cloudflare Pages，实现手机 APP 远程热更新。
 
 **触发关键词**（用户说这些话就调用）：
 - "部署 OTA" / "远程更新" / "热更新部署"
 - "推送到 Cloudflare" / "更新手机 APP"
 - `/deploy-ota`
 
-### 一键部署命令
+### ⭐ 推荐方式:Git 自动化管道(2026-07-09 起启用)
 
-```bash
-npm run deploy:ota
+**流程**:
+```
+本地改代码 → git push (到 Gitee master)
+             ↓ 自动同步
+GitHub (superbin17173-wq/plan-flow, master)
+             ↓ webhook 触发
+Cloudflare Pages 自动 build (npm run build:ota) + 部署
+             ↓
+https://planflow-aot.pages.dev 上线新版
 ```
 
-这条命令会：
-1. 构建前端代码 (`vue-tsc -b && vite build`)
-2. 生成 `version.json` + `dist.zip`
-3. 自动上传到 Cloudflare Pages
+**用户只做**:`git push origin master`。剩下全自动,~2 分钟部署完。
+
+**为什么走这条**:国内 wrangler CLI 到 `api.cloudflare.com` 稳定性差(Node undici + 中国网络),经常 `fetch failed`。让 CF 服务器上 build 部署,绕开本地网络问题。
+
+### 备用方式 1:手动拖拽上传
+
+wrangler / Git 都不可用时:
+1. 本地跑 `npm run build:ota` 生成 dist/
+2. 浏览器打开 https://dash.cloudflare.com → Pages → planflow(planflow-aot) → Create deployment
+3. 拖 `dist/` 文件夹进去 → Deploy
+
+### 备用方式 2:wrangler CLI(不稳定)
+
+```bash
+NODE_OPTIONS="--dns-result-order=ipv4first" CLOUDFLARE_API_TOKEN=xxx npm run deploy:ota
+```
+
+需要 IPv4-first 才有一定概率通,不推荐。
 
 ### OTA 更新地址
 
@@ -128,16 +149,18 @@ https://planflow-aot.pages.dev/dist.zip
 
 ### 版本号管理
 
-版本号来自 `package.json` 的 `version` 字段。更新版本后重新部署：
+版本号来自 `package.json` 的 `version` 字段。更新版本后 `git push` 即可自动部署:
 
 ```bash
 # 修改 package.json version 字段
-npm run deploy:ota
+git commit -am "bump version"
+git push origin master
 ```
 
 ### 验证部署
 
 ```bash
 curl https://planflow-aot.pages.dev/version.json
-npx wrangler pages deployment list --project-name planflow
 ```
+
+对比 `buildTime` 是否是最近的时间,即可确认新版本已上线。
