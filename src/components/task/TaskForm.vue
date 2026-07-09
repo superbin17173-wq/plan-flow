@@ -25,10 +25,18 @@ const formData = ref<TaskFormData>({
   date: uiStore.selectedDate,
   startTime: '09:00',
   endTime: '10:00',
+  durationMinutes: undefined,
   recurrence: undefined,
   remindAt: undefined, // 默认不提醒,需在表单里手动打开开关
   workout: undefined,
 })
+
+// 时间模式:timed(默认) | duration | anytime
+type TimeMode = 'timed' | 'duration' | 'anytime'
+const timeMode = ref<TimeMode>('timed')
+// 时长快捷选项(分钟)
+const durationPresets = [15, 30, 45, 60, 90, 120, 180]
+const durationInput = ref<number>(60)
 
 // 健身动作列表(仅当 category === 'fitness')
 const workoutExercises = ref<WorkoutExercise[]>([])
@@ -176,6 +184,7 @@ watch(
   () => uiStore.prefillTime,
   (time) => {
     if (time && !isEditMode.value) {
+      timeMode.value = 'timed'
       formData.value.startTime = time
       // 自动设置结束时间为开始时间后一小时
       const [hour, minute] = time.split(':').map(Number)
@@ -189,14 +198,24 @@ watch(
 // 加载编辑任务数据
 watch(editingTask, (task) => {
   if (task) {
+    // 反推时间模式
+    if (task.startTime && task.endTime) {
+      timeMode.value = 'timed'
+    } else if (task.durationMinutes != null) {
+      timeMode.value = 'duration'
+      durationInput.value = task.durationMinutes
+    } else {
+      timeMode.value = 'anytime'
+    }
     formData.value = {
       title: task.title,
       description: task.description,
       category: task.category,
       priority: task.priority,
       date: task.date,
-      startTime: task.startTime,
-      endTime: task.endTime,
+      startTime: task.startTime ?? '09:00',
+      endTime: task.endTime ?? '10:00',
+      durationMinutes: task.durationMinutes,
       recurrence: task.recurrence,
       remindAt: task.remindAt,
       workout: task.workout,
@@ -225,6 +244,8 @@ watch(editingTask, (task) => {
     showReminder.value = false
     showRecurrence.value = false
     recurrenceType.value = 'none'
+    timeMode.value = 'timed'
+    durationInput.value = 60
   }
 }, { immediate: true })
 
@@ -267,8 +288,14 @@ const weekdays = [
 
 // 验证
 const isValid = computed(() => {
-  return formData.value.title.trim().length > 0 &&
-         formData.value.startTime < formData.value.endTime
+  if (formData.value.title.trim().length === 0) return false
+  if (timeMode.value === 'timed') {
+    return !!(formData.value.startTime && formData.value.endTime && formData.value.startTime < formData.value.endTime)
+  }
+  if (timeMode.value === 'duration') {
+    return durationInput.value > 0
+  }
+  return true // anytime
 })
 
 // 提交
@@ -311,10 +338,30 @@ async function handleSubmit() {
     }
   }
 
+  // 根据时间模式装配时间字段
+  let startTime: string | undefined
+  let endTime: string | undefined
+  let durationMinutes: number | undefined
+  if (timeMode.value === 'timed') {
+    startTime = formData.value.startTime
+    endTime = formData.value.endTime
+    // 非定时模式下提醒无意义,仅 timed 保留 remindAt
+  } else if (timeMode.value === 'duration') {
+    durationMinutes = durationInput.value
+  }
+  // anytime: 全部保持 undefined
+
   const submitData: TaskFormData = {
-    ...formData.value,
+    title: formData.value.title,
+    description: formData.value.description,
+    category: formData.value.category,
+    priority: formData.value.priority,
+    date: formData.value.date,
+    startTime,
+    endTime,
+    durationMinutes,
     recurrence,
-    remindAt: showReminder.value ? remindAt.value : undefined,
+    remindAt: (timeMode.value === 'timed' && showReminder.value) ? remindAt.value : undefined,
     workout: workoutClean,
     study: studyClean,
   }
@@ -429,8 +476,33 @@ watch(recurrenceType, (type) => {
                 />
               </div>
 
-              <!-- 时间 -->
-              <div class="form-row">
+              <!-- 时间安排 -->
+              <div class="form-group">
+                <label class="form-label">时间安排</label>
+                <div class="time-mode-tabs">
+                  <button
+                    type="button"
+                    class="time-mode-btn"
+                    :class="{ active: timeMode === 'timed' }"
+                    @click="timeMode = 'timed'"
+                  >⏰ 定时</button>
+                  <button
+                    type="button"
+                    class="time-mode-btn"
+                    :class="{ active: timeMode === 'duration' }"
+                    @click="timeMode = 'duration'"
+                  >⏳ 花费时长</button>
+                  <button
+                    type="button"
+                    class="time-mode-btn"
+                    :class="{ active: timeMode === 'anytime' }"
+                    @click="timeMode = 'anytime'"
+                  >📌 全天待办</button>
+                </div>
+              </div>
+
+              <!-- 时间 (仅定时模式) -->
+              <div v-if="timeMode === 'timed'" class="form-row">
                 <div class="form-group half">
                   <label class="form-label">开始时间</label>
                   <select v-model="formData.startTime" class="form-input">
@@ -447,6 +519,37 @@ watch(recurrenceType, (type) => {
                     </option>
                   </select>
                 </div>
+              </div>
+
+              <!-- 时长 (仅时长模式) -->
+              <div v-else-if="timeMode === 'duration'" class="form-group">
+                <label class="form-label">预计花费</label>
+                <div class="duration-presets">
+                  <button
+                    v-for="m in durationPresets"
+                    :key="m"
+                    type="button"
+                    class="duration-chip"
+                    :class="{ active: durationInput === m }"
+                    @click="durationInput = m"
+                  >{{ m < 60 ? m + 'm' : (m % 60 === 0 ? (m / 60) + 'h' : (m / 60).toFixed(1) + 'h') }}</button>
+                </div>
+                <div class="duration-custom">
+                  <input
+                    v-model.number="durationInput"
+                    type="number"
+                    min="1"
+                    max="1440"
+                    class="form-input"
+                    placeholder="自定义分钟数"
+                  />
+                  <span class="duration-unit">分钟</span>
+                </div>
+              </div>
+
+              <!-- 全天待办 (仅 anytime 模式,占位说明) -->
+              <div v-else class="form-group">
+                <div class="anytime-hint">✅ 该任务将归入当天"未排时段"区域,无具体时间</div>
               </div>
 
               <!-- 健身计划(仅健身分类) -->
@@ -550,7 +653,7 @@ watch(recurrenceType, (type) => {
               </div>
 
               <!-- 提醒 -->
-              <div class="form-group">
+              <div v-if="timeMode === 'timed'" class="form-group">
                 <div class="toggle-row">
                   <label class="form-label">提醒</label>
                   <button
@@ -982,5 +1085,76 @@ watch(recurrenceType, (type) => {
     border-radius: 20px;
     max-height: 90vh;
   }
+}
+
+// 时间模式三态切换
+.time-mode-tabs {
+  display: flex;
+  gap: 8px;
+  background: #FFFFFF;
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.time-mode-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #8E8E93;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+
+  &.active {
+    background: #007AFF;
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(0,122,255,0.25);
+  }
+}
+
+.duration-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.duration-chip {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #1A1A1A;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+
+  &.active {
+    background: #007AFF;
+    color: #FFFFFF;
+  }
+}
+
+.duration-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .form-input { flex: 1; }
+}
+
+.duration-unit {
+  font-size: 14px;
+  color: #8E8E93;
+}
+
+.anytime-hint {
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  color: #8E8E93;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 </style>

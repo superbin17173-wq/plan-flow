@@ -1,4 +1,4 @@
-// 批量生成任务:日期区间 + 星期几 + 时段
+// 批量生成任务:日期区间 + 星期几 + 时段/时长
 import dayjs from 'dayjs'
 import type { TaskFormData } from '../types'
 
@@ -10,8 +10,13 @@ export interface BulkPlanParams {
   startDate: string // YYYY-MM-DD
   endDate: string // YYYY-MM-DD
   daysOfWeek: number[] // 0=周日 ... 6=周六
-  startTime: string
-  endTime: string
+  // 时间模式三态:
+  //  timed:    startTime + endTime 都有
+  //  duration: 只 durationMinutes
+  //  anytime:  三者都为空
+  startTime?: string
+  endTime?: string
+  durationMinutes?: number
 }
 
 // 展开成任务数组
@@ -26,6 +31,9 @@ export function expandBulkPlan(params: BulkPlanParams): TaskFormData[] {
   const maxDays = 1200
   let steps = 0
 
+  const hasTimed = !!(params.startTime && params.endTime)
+  const hasDuration = !hasTimed && !!(params.durationMinutes && params.durationMinutes > 0)
+
   while ((cur.isBefore(end, 'day') || cur.isSame(end, 'day')) && steps < maxDays) {
     if (weekSet.has(cur.day())) {
       result.push({
@@ -34,8 +42,9 @@ export function expandBulkPlan(params: BulkPlanParams): TaskFormData[] {
         category: params.category,
         priority: params.priority,
         date: cur.format('YYYY-MM-DD'),
-        startTime: params.startTime,
-        endTime: params.endTime,
+        startTime: hasTimed ? params.startTime : undefined,
+        endTime: hasTimed ? params.endTime : undefined,
+        durationMinutes: hasDuration ? params.durationMinutes : undefined,
       })
     }
     cur = cur.add(1, 'day')

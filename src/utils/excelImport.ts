@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import type { TaskFormData } from '../types'
 import { DEFAULT_CATEGORIES } from '../types/category'
 
-const HEADERS = ['日期', '开始时间', '结束时间', '标题', '分类', '优先级', '描述']
+const HEADERS = ['日期', '开始时间', '结束时间', '时长(分钟)', '标题', '分类', '优先级', '描述']
 
 const CATEGORY_NAME_TO_ID: Record<string, string> = Object.fromEntries(
   DEFAULT_CATEGORIES.flatMap(c => [
@@ -36,22 +36,26 @@ export interface ParseResult {
 export function downloadTemplate(): void {
   const example = [
     HEADERS,
-    ['2026-07-15', '09:00', '10:30', '例:晨会同步', '工作', '高', '每日站会'],
-    ['2026-07-15', '14:00', '15:00', '例:阅读', '学习', '中', ''],
-    ['2026/7/16', '20:00', '21:00', '例:健身', '健康', '低', ''],
+    ['2026-07-15', '09:00', '10:30', '', '例:晨会同步', '工作', '高', '每日站会'],
+    ['2026-07-15', '14:00', '15:00', '', '例:阅读', '学习', '中', ''],
+    ['2026/7/16', '', '', '30', '例:背单词(仅时长)', '学习', '中', '不定时,预计 30 分钟'],
+    ['2026/7/17', '', '', '', '例:取快递(全天待办)', '生活', '低', '当天任意时间'],
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(example)
   ws['!cols'] = [
-    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 28 },
-    { wch: 10 }, { wch: 8 }, { wch: 32 },
+    { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
+    { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 32 },
   ]
 
   const notes = [
     [''],
     ['填写说明:'],
     ['1. 日期格式支持 YYYY-MM-DD 或 YYYY/M/D 或 Excel 日期'],
-    ['2. 时间格式 HH:mm(24 小时制),结束时间必须晚于开始时间'],
+    ['2. 时间格式 HH:mm(24 小时制)。三种填法:'],
+    ['   - 同时填开始+结束时间 => 定时任务(显示在时间轴)'],
+    ['   - 只填"时长(分钟)"(开始/结束留空) => 花费时长任务(归入未排时段)'],
+    ['   - 都留空 => 全天待办'],
     ['3. 分类可选: ' + DEFAULT_CATEGORIES.map(c => c.name).join('、')],
     ['4. 优先级可选: 高、中、低(留空默认中)'],
     ['5. 描述可留空'],
@@ -160,24 +164,38 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
       continue
     }
 
-    const startTime = parseTime(row[1])
-    if (!startTime) {
-      errors.push({ row: excelRow, message: `开始时间无法识别: "${row[1]}"` })
-      continue
+    // 三态时间: 开始+结束 / 只时长 / 全空
+    const rawStart = row[1]
+    const rawEnd = row[2]
+    const rawDuration = row[3]
+    const startTime = (rawStart !== '' && rawStart != null) ? parseTime(rawStart) : null
+    const endTime = (rawEnd !== '' && rawEnd != null) ? parseTime(rawEnd) : null
+    const durationRaw = (rawDuration !== '' && rawDuration != null) ? Number(rawDuration) : NaN
+    const durationMinutes = Number.isFinite(durationRaw) && durationRaw > 0 ? Math.round(durationRaw) : undefined
+
+    let mode: 'timed' | 'duration' | 'anytime'
+    if ((rawStart !== '' && rawStart != null) || (rawEnd !== '' && rawEnd != null)) {
+      // 用户填了时间字段,视为 timed,两端都必须解析成功
+      if (!startTime) {
+        errors.push({ row: excelRow, message: `开始时间无法识别: "${rawStart}"` })
+        continue
+      }
+      if (!endTime) {
+        errors.push({ row: excelRow, message: `结束时间无法识别: "${rawEnd}"` })
+        continue
+      }
+      if (endTime <= startTime) {
+        errors.push({ row: excelRow, message: `结束时间(${endTime})必须晚于开始时间(${startTime})` })
+        continue
+      }
+      mode = 'timed'
+    } else if (durationMinutes) {
+      mode = 'duration'
+    } else {
+      mode = 'anytime'
     }
 
-    const endTime = parseTime(row[2])
-    if (!endTime) {
-      errors.push({ row: excelRow, message: `结束时间无法识别: "${row[2]}"` })
-      continue
-    }
-
-    if (endTime <= startTime) {
-      errors.push({ row: excelRow, message: `结束时间(${endTime})必须晚于开始时间(${startTime})` })
-      continue
-    }
-
-    const title = String(row[3] || '').trim()
+    const title = String(row[4] || '').trim()
     if (!title) {
       errors.push({ row: excelRow, message: '标题不能为空' })
       continue
@@ -185,12 +203,13 @@ export async function parseExcelFile(file: File): Promise<ParseResult> {
 
     valid.push({
       title,
-      description: row[6] ? String(row[6]).trim() : undefined,
-      category: parseCategory(row[4]),
-      priority: parsePriority(row[5]),
+      description: row[7] ? String(row[7]).trim() : undefined,
+      category: parseCategory(row[5]),
+      priority: parsePriority(row[6]),
       date: dateVal,
-      startTime,
-      endTime,
+      startTime: mode === 'timed' ? startTime! : undefined,
+      endTime: mode === 'timed' ? endTime! : undefined,
+      durationMinutes: mode === 'duration' ? durationMinutes : undefined,
     })
   }
 

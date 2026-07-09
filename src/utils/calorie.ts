@@ -1,5 +1,6 @@
 // BMR / TDEE / 训练消耗 / 饮食计算
 import type { Task, WorkoutExercise, MeasurementEntry, Settings } from '../types'
+import { getTaskMinutes } from './timeUtils'
 
 // 部位默认 MET (代谢当量,基于 Compendium of Physical Activities)
 export const MET_BY_GROUP: Record<string, number> = {
@@ -88,9 +89,7 @@ export function calcTaskCalories(task: Task, weightKg: number): number {
 }
 
 function taskDurationMin(task: Task): number {
-  const [sh, sm] = task.startTime.split(':').map(Number)
-  const [eh, em] = task.endTime.split(':').map(Number)
-  return (eh * 60 + em) - (sh * 60 + sm)
+  return getTaskMinutes(task)
 }
 
 // 汇总某日所有训练任务的消耗

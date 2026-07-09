@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
-import { timeToMinutes, minutesToTime, getTaskPosition, getConflictingTasks } from '../../utils/timeUtils'
+import { timeToMinutes, minutesToTime, getTaskPosition, getConflictingTasks, isTimedTask } from '../../utils/timeUtils'
 import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
 import TaskBlock from './TaskBlock.vue'
 import DayTimePie from './DayTimePie.vue'
@@ -18,6 +18,25 @@ const now = useNow()
 const dayTasks = computed(() => {
   return taskStore.getTasksByDate(uiStore.selectedDate)
 })
+
+// 时间轴上渲染的定时任务
+const timedTasks = computed(() => dayTasks.value.filter(isTimedTask))
+
+// 未排时段任务(duration + anytime)
+const unscheduledTasks = computed(() => dayTasks.value.filter(t => !isTimedTask(t)))
+
+// 未排时段任务的显示文本
+function unscheduledLabel(task: any): string {
+  if (task.durationMinutes != null) {
+    const m = task.durationMinutes
+    if (m >= 60) {
+      const h = m / 60
+      return `预计 ${Number.isInteger(h) ? h : h.toFixed(1)}h`
+    }
+    return `预计 ${m}m`
+  }
+  return '全天'
+}
 
 // 小时列表 (0-23)
 const hours = Array.from({ length: 24 }, (_, i) => i)
@@ -51,12 +70,14 @@ function hourIsPast(hour: number): boolean {
 
 // 判断某任务是否已结束
 function taskIsPast(task: any): boolean {
+  if (!task.endTime) return false
   return isPastTime(uiStore.selectedDate, task.endTime, now.value)
 }
 
 // 计算任务重叠层级
 function getOverlapIndex(task: any): number {
-  const tasks = dayTasks.value.filter(t => !t.isCompleted)
+  if (!isTimedTask(task)) return 0
+  const tasks = timedTasks.value.filter(t => !t.isCompleted)
   const conflicts = getConflictingTasks(tasks, task.startTime, task.endTime)
   const index = conflicts.findIndex(t => t.id === task.id)
   return index
@@ -141,6 +162,25 @@ function getRelativeDate(): string {
       />
     </div>
 
+    <!-- 未排时段任务(duration + anytime) -->
+    <div v-if="unscheduledTasks.length > 0" class="unscheduled-strip">
+      <div class="unscheduled-label">⏳ 未排时段</div>
+      <div class="unscheduled-chips">
+        <button
+          v-for="task in unscheduledTasks"
+          :key="task.id"
+          class="unscheduled-chip"
+          :class="{ done: task.isCompleted }"
+          :style="{ borderColor: task.color }"
+          @click="uiStore.openTaskCard(task.id)"
+        >
+          <span class="chip-dot" :style="{ backgroundColor: task.color }"></span>
+          <span class="chip-title">{{ task.title }}</span>
+          <span class="chip-time">{{ unscheduledLabel(task) }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 日内容 -->
     <div class="day-body">
       <!-- 时间轴 -->
@@ -168,9 +208,9 @@ function getRelativeDate(): string {
           ></div>
         </div>
 
-        <!-- 任务块 -->
+        <!-- 任务块(仅定时任务) -->
         <TaskBlock
-          v-for="task in dayTasks"
+          v-for="task in timedTasks"
           :key="task.id"
           :task="task"
           :hour-height="60"
@@ -273,6 +313,65 @@ function getRelativeDate(): string {
   border-bottom: 1px solid #E5E5EA;
 }
 
+.unscheduled-strip {
+  padding: 10px 16px 12px;
+  background: #F2F2F7;
+  border-bottom: 1px solid #E5E5EA;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.unscheduled-label {
+  font-size: 12px;
+  color: #8E8E93;
+  font-weight: 500;
+}
+
+.unscheduled-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.unscheduled-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  font-size: 13px;
+  color: #1A1A1A;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  max-width: 100%;
+
+  &.done {
+    opacity: 0.5;
+    text-decoration: line-through;
+  }
+
+  .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .chip-title {
+    max-width: 12em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chip-time {
+    color: #8E8E93;
+    font-size: 12px;
+  }
+}
 .time-axis {
   width: 60px;
   flex-shrink: 0;

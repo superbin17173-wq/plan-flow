@@ -49,27 +49,27 @@ const groupedTasks = computed(() => {
   // 上午 (6:00-12:00)
   const morning = selectedDateTasks.value.filter(t => {
     const time = t.startTime || ''
-    return time >= '06:00' && time < '12:00'
+    return t.startTime && t.endTime && time >= '06:00' && time < '12:00'
   })
   if (morning.length) groups.push({ label: '上午', tasks: morning })
 
   // 下午 (12:00-18:00)
   const afternoon = selectedDateTasks.value.filter(t => {
     const time = t.startTime || ''
-    return time >= '12:00' && time < '18:00'
+    return t.startTime && t.endTime && time >= '12:00' && time < '18:00'
   })
   if (afternoon.length) groups.push({ label: '下午', tasks: afternoon })
 
   // 晚上 (18:00-24:00)
   const evening = selectedDateTasks.value.filter(t => {
     const time = t.startTime || ''
-    return time >= '18:00' && time < '24:00'
+    return t.startTime && t.endTime && time >= '18:00' && time < '24:00'
   })
   if (evening.length) groups.push({ label: '晚上', tasks: evening })
 
-  // 无时间或全天
-  const noTime = selectedDateTasks.value.filter(t => !t.startTime)
-  if (noTime.length) groups.push({ label: '全天', tasks: noTime })
+  // 未排时段(duration + anytime)
+  const noTime = selectedDateTasks.value.filter(t => !(t.startTime && t.endTime))
+  if (noTime.length) groups.push({ label: '未排时段', tasks: noTime })
 
   // 如果没有任何分组，返回空
   if (groups.length === 0 && selectedDateTasks.value.length > 0) {
@@ -78,6 +78,20 @@ const groupedTasks = computed(() => {
 
   return groups
 })
+
+// 任务副标题(时间信息)
+function taskMetaText(task: any): string {
+  if (task.startTime && task.endTime) return `${task.startTime} - ${task.endTime}`
+  if (task.durationMinutes != null) {
+    const m = task.durationMinutes
+    if (m >= 60) {
+      const h = m / 60
+      return `预计 ${Number.isInteger(h) ? h : h.toFixed(1)}h`
+    }
+    return `预计 ${m}m`
+  }
+  return '全天'
+}
 
 // 选中日期显示文字
 const selectedDateText = computed(() => {
@@ -228,10 +242,7 @@ onMounted(async () => {
               <div class="ios-task-dot" :style="{ background: getTaskColor(task) }"></div>
               <div class="ios-task-main">
                 <span class="ios-task-name">{{ task.title }}</span>
-                <span class="ios-task-meta">
-                  {{ task.startTime || '全天' }}
-                  <span v-if="task.endTime"> - {{ task.endTime }}</span>
-                </span>
+                <span class="ios-task-meta">{{ taskMetaText(task) }}</span>
               </div>
               <span class="ios-task-icon">{{ getTaskIcon(task) }}</span>
               <div v-if="index < group.tasks.length - 1" class="ios-divider"></div>

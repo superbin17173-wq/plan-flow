@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
-import { getTaskPosition } from '../../utils/timeUtils'
+import { getTaskPosition, isTimedTask } from '../../utils/timeUtils'
 import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
 import TaskBlock from './TaskBlock.vue'
 
@@ -59,6 +59,16 @@ function getDayTasks(date: Date) {
   return taskStore.getTasksByDate(dateStr)
 }
 
+// 获取某天的定时任务(用于时间轴)
+function getDayTimedTasks(date: Date) {
+  return getDayTasks(date).filter(isTimedTask)
+}
+
+// 获取某天的未排时段任务数
+function getDayUnscheduledCount(date: Date) {
+  return getDayTasks(date).filter(t => !isTimedTask(t)).length
+}
+
 // 点击日期列
 function handleColumnClick(date: Date) {
   const dateStr = formatDate(date)
@@ -82,6 +92,7 @@ function hourIsPast(date: Date, hour: number): boolean {
 }
 
 function taskIsPast(date: Date, task: any): boolean {
+  if (!task.endTime) return false
   return isPastTime(formatDate(date), task.endTime, now.value)
 }
 
@@ -117,6 +128,7 @@ function endDrag() {
       >
         <div class="weekday-name">{{ weekdays[index] }}</div>
         <div class="day-date">{{ dayjs(date).format('DD') }}</div>
+        <div v-if="getDayUnscheduledCount(date) > 0" class="unsched-dot" :title="`${getDayUnscheduledCount(date)} 项未排时段`">·{{ getDayUnscheduledCount(date) }}</div>
       </div>
     </div>
 
@@ -148,9 +160,9 @@ function endDrag() {
             ></div>
           </div>
 
-          <!-- 任务块 -->
+          <!-- 任务块(仅定时任务) -->
           <TaskBlock
-            v-for="task in getDayTasks(date)"
+            v-for="task in getDayTimedTasks(date)"
             :key="task.id"
             :task="task"
             :hour-height="60"
@@ -222,6 +234,13 @@ function endDrag() {
   font-size: 13px;
   font-weight: 500;
   color: #8E8E93;
+}
+
+.unsched-dot {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #FF9500;
+  font-weight: 600;
 }
 
 .day-date {

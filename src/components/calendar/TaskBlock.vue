@@ -66,7 +66,7 @@ const overlapStyle = computed(() => {
 
 // 时间显示
 const timeDisplay = computed(() => {
-  return `${props.task.startTime} - ${props.task.endTime}`
+  return `${props.task.startTime ?? ''} - ${props.task.endTime ?? ''}`
 })
 
 // 健身摘要
@@ -116,6 +116,7 @@ let pendingEnd: string | null = null
 
 function handleMouseDown(e: MouseEvent) {
   if (props.task.isCompleted || props.isPast) return
+  if (!props.task.startTime || !props.task.endTime) return
   e.preventDefault()
 
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()

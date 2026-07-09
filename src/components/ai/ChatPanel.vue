@@ -284,7 +284,7 @@ function cancelDelete() {
             <h4>确认删除？</h4>
             <p v-if="pendingDelete.task">
               <b>{{ pendingDelete.task.title }}</b><br />
-              {{ pendingDelete.task.date }} {{ pendingDelete.task.startTime }}
+              {{ pendingDelete.task.date }} {{ pendingDelete.task.startTime || (pendingDelete.task.durationMinutes ? pendingDelete.task.durationMinutes + 'm' : '全天') }}
             </p>
             <p v-else>任务 ID: {{ pendingDelete.taskId }}</p>
             <div class="confirm-actions">

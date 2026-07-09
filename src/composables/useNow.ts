@@ -43,7 +43,8 @@ export function isPastHour(dateStr: string, hour: number, nowDate: Date = new Da
   return hour < n.hour()
 }
 
-export function isPastTime(dateStr: string, endTime: string, nowDate: Date = new Date()): boolean {
+export function isPastTime(dateStr: string, endTime: string | undefined, nowDate: Date = new Date()): boolean {
+  if (!endTime) return false
   const [h, m] = endTime.split(':').map(Number)
   const end = dayjs(dateStr).hour(h).minute(m).second(0)
   return end.isBefore(dayjs(nowDate))

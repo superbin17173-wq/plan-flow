@@ -107,15 +107,32 @@ export function minutesToTime(minutes: number): string {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
+// 类型 guard: 任务是否为"定时"模式(startTime + endTime 都有)
+export function isTimedTask(task: Pick<Task, 'startTime' | 'endTime'>): task is Task & { startTime: string; endTime: string } {
+  return !!(task.startTime && task.endTime)
+}
+
+// 统一计算任务占用分钟数
+//  - timed:    endTime - startTime
+//  - duration: durationMinutes
+//  - anytime:  0
+export function getTaskMinutes(task: Pick<Task, 'startTime' | 'endTime' | 'durationMinutes'>): number {
+  if (task.startTime && task.endTime) {
+    const d = timeToMinutes(task.endTime) - timeToMinutes(task.startTime)
+    return d > 0 ? d : 0
+  }
+  return task.durationMinutes ?? 0
+}
+
 // 计算任务时长（分钟）
 export function getTaskDuration(task: Task): number {
-  const start = timeToMinutes(task.startTime)
-  const end = timeToMinutes(task.endTime)
-  return end - start
+  return getTaskMinutes(task)
 }
 
 // 获取任务在时间轴上的位置（小时高度 = 60px）
+// 仅对 timed 任务有意义,非 timed 返回 null,调用方应先过滤
 export function getTaskPosition(task: Task, hourHeight: number = 60): { top: number; height: number } {
+  if (!isTimedTask(task)) return { top: 0, height: 0 }
   const startMinutes = timeToMinutes(task.startTime)
   const endMinutes = timeToMinutes(task.endTime)
   const top = (startMinutes / 60) * hourHeight
@@ -123,9 +140,10 @@ export function getTaskPosition(task: Task, hourHeight: number = 60): { top: num
   return { top, height }
 }
 
-// 检查时间冲突
+// 检查时间冲突(非 timed 任务不参与冲突)
 export function hasTimeConflict(task1: Task, task2: Task): boolean {
   if (task1.date !== task2.date) return false
+  if (!isTimedTask(task1) || !isTimedTask(task2)) return false
   const start1 = timeToMinutes(task1.startTime)
   const end1 = timeToMinutes(task1.endTime)
   const start2 = timeToMinutes(task2.startTime)
@@ -133,11 +151,12 @@ export function hasTimeConflict(task1: Task, task2: Task): boolean {
   return !(end1 <= start2 || end2 <= start1)
 }
 
-// 获取一天中某时间段的冲突任务
+// 获取一天中某时间段的冲突任务(只对 timed 任务生效)
 export function getConflictingTasks(tasks: Task[], startTime: string, endTime: string): Task[] {
+  const start1 = timeToMinutes(startTime)
+  const end1 = timeToMinutes(endTime)
   return tasks.filter(task => {
-    const start1 = timeToMinutes(startTime)
-    const end1 = timeToMinutes(endTime)
+    if (!isTimedTask(task)) return false
     const start2 = timeToMinutes(task.startTime)
     const end2 = timeToMinutes(task.endTime)
     return !(end1 <= start2 || end2 <= start1)

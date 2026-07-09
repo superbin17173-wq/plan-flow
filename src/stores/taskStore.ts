@@ -28,8 +28,16 @@ export const useTaskStore = defineStore('task', () => {
     return tasks.value
       .filter(t => t.date === date)
       .sort((a, b) => {
-        if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime)
-        return a.endTime.localeCompare(b.endTime)
+        // timed 优先按 startTime 排序,非 timed 排后按 createdAt
+        const aTimed = !!(a.startTime && a.endTime)
+        const bTimed = !!(b.startTime && b.endTime)
+        if (aTimed && !bTimed) return -1
+        if (!aTimed && bTimed) return 1
+        if (aTimed && bTimed) {
+          if (a.startTime !== b.startTime) return a.startTime!.localeCompare(b.startTime!)
+          return a.endTime!.localeCompare(b.endTime!)
+        }
+        return a.createdAt - b.createdAt
       })
   }
 
@@ -39,7 +47,12 @@ export const useTaskStore = defineStore('task', () => {
       .filter(t => t.date >= startDate && t.date <= endDate)
       .sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date)
-        return a.startTime.localeCompare(b.startTime)
+        const aTimed = !!(a.startTime && a.endTime)
+        const bTimed = !!(b.startTime && b.endTime)
+        if (aTimed && !bTimed) return -1
+        if (!aTimed && bTimed) return 1
+        if (aTimed && bTimed) return a.startTime!.localeCompare(b.startTime!)
+        return a.createdAt - b.createdAt
       })
   }
 
@@ -59,6 +72,7 @@ export const useTaskStore = defineStore('task', () => {
       date: date || formData.date,
       startTime: formData.startTime,
       endTime: formData.endTime,
+      durationMinutes: formData.durationMinutes,
       color: getCategoryColor(formData.category),
       isCompleted: false,
       recurrence: formData.recurrence,
@@ -140,6 +154,7 @@ export const useTaskStore = defineStore('task', () => {
         date: reviewDates[i],
         startTime: originTask.startTime,
         endTime: originTask.endTime,
+        durationMinutes: originTask.durationMinutes,
         color: getCategoryColor('study'),
         isCompleted: false,
         study: {
@@ -250,8 +265,11 @@ export const useTaskStore = defineStore('task', () => {
     }
     if (formData.priority !== undefined) task.priority = formData.priority
     if (formData.date !== undefined) task.date = formData.date
-    if (formData.startTime !== undefined) task.startTime = formData.startTime
-    if (formData.endTime !== undefined) task.endTime = formData.endTime
+    // 时间字段允许显式清空(切换到"全天"模式时需要清 startTime/endTime,切换到"定时"时需清 durationMinutes)
+    // 用属性存在与否作为"是否想修改该字段"的信号
+    if ('startTime' in formData) task.startTime = formData.startTime
+    if ('endTime' in formData) task.endTime = formData.endTime
+    if ('durationMinutes' in formData) task.durationMinutes = formData.durationMinutes
     if (formData.recurrence !== undefined) task.recurrence = formData.recurrence
     if (formData.remindAt !== undefined) task.remindAt = formData.remindAt
     if (formData.workout !== undefined) task.workout = formData.workout
@@ -295,6 +313,7 @@ export const useTaskStore = defineStore('task', () => {
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
+        durationMinutes: formData.durationMinutes,
         color: getCategoryColor(formData.category),
         isCompleted: false,
         recurrence: formData.recurrence,

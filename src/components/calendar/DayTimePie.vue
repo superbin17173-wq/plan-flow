@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '../../types/task'
-import { timeToMinutes } from '../../utils/timeUtils'
+import { timeToMinutes, isTimedTask, getTaskMinutes } from '../../utils/timeUtils'
 
 const props = defineProps<{
   tasks: Task[]
@@ -16,15 +16,25 @@ const sleepMinutes = computed(() => {
   return end - start
 })
 
-const taskMinutes = computed(() => {
+// 定时任务分钟数(有具体时段)
+const timedMinutes = computed(() => {
   let total = 0
   for (const task of props.tasks) {
-    const start = timeToMinutes(task.startTime)
-    const end = timeToMinutes(task.endTime)
-    total += (end - start)
+    if (isTimedTask(task)) total += getTaskMinutes(task)
   }
   return total
 })
+
+// 未排时段分钟数(只有 duration 的任务)
+const unscheduledMinutes = computed(() => {
+  let total = 0
+  for (const task of props.tasks) {
+    if (!isTimedTask(task) && task.durationMinutes != null) total += task.durationMinutes
+  }
+  return total
+})
+
+const taskMinutes = computed(() => timedMinutes.value + unscheduledMinutes.value)
 
 const restMinutes = computed(() => {
   return Math.max(0, 1440 - sleepMinutes.value - taskMinutes.value)
@@ -93,6 +103,9 @@ const segments = computed(() => {
       <div class="legend-item">
         <span class="legend-dot task"></span>
         <span class="legend-text">任务 {{ formatMinutes(taskMinutes) }}</span>
+      </div>
+      <div v-if="unscheduledMinutes > 0" class="legend-sub">
+        其中未排时段 {{ formatMinutes(unscheduledMinutes) }}
       </div>
       <div class="legend-item">
         <span class="legend-dot rest"></span>
@@ -175,6 +188,13 @@ const segments = computed(() => {
   font-size: 12px;
   color: var(--text-secondary, #8E8E93);
   white-space: nowrap;
+}
+
+.legend-sub {
+  font-size: 10px;
+  color: var(--text-tertiary, #C7C7CC);
+  padding-left: 14px;
+  margin-top: -2px;
 }
 
 @media (max-width: 768px) {

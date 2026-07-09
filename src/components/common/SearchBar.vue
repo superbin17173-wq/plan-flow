@@ -140,7 +140,7 @@ function clearFilters() {
                   <span class="task-title" :class="{ completed: task.isCompleted }">
                     {{ task.title }}
                   </span>
-                  <span class="task-time">{{ task.startTime }}</span>
+                  <span class="task-time">{{ task.startTime || (task.durationMinutes ? task.durationMinutes + 'm' : '全天') }}</span>
                 </div>
               </div>
             </div>

@@ -105,7 +105,17 @@ function handleClose() {
 // 时间显示
 const timeDisplay = computed(() => {
   if (!task.value) return ''
-  return `${task.value.startTime} - ${task.value.endTime}`
+  const t = task.value
+  if (t.startTime && t.endTime) return `${t.startTime} - ${t.endTime}`
+  if (t.durationMinutes != null) {
+    const m = t.durationMinutes
+    if (m >= 60) {
+      const h = m / 60
+      return `预计 ${Number.isInteger(h) ? h : h.toFixed(1)}h`
+    }
+    return `预计 ${m}m`
+  }
+  return '全天'
 })
 
 // 日期显示

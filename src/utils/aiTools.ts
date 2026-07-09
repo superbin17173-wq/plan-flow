@@ -13,20 +13,21 @@ export const AI_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'addTask',
-      description: '新增一个任务/计划。需要提供标题、日期、开始时间。其他字段可选。',
+      description: '新增一个任务/计划。时间安排有三种模式:1)定时(提供 startTime,可选 endTime,默认持续 1h); 2)只有时长(提供 durationMinutes,如"读 30 分钟单词"); 3)全天待办(都不提供,当天要做但没具体时间)。',
       parameters: {
         type: 'object',
         properties: {
           title: { type: 'string', description: '任务标题，简明扼要' },
           description: { type: 'string', description: '任务备注/详情，可选' },
           date: { type: 'string', description: '日期，格式 YYYY-MM-DD，如 2026-07-15' },
-          startTime: { type: 'string', description: '开始时间，格式 HH:mm，如 14:30' },
-          endTime: { type: 'string', description: '结束时间，格式 HH:mm；如果没说，比开始时间晚 1 小时' },
+          startTime: { type: 'string', description: '开始时间 HH:mm。仅当用户明确说"几点开始"时用' },
+          endTime: { type: 'string', description: '结束时间 HH:mm。有 startTime 时才有意义;若未指定,默认 start+1h' },
+          durationMinutes: { type: 'number', description: '花费时长(分钟)。用户只说"读 30 分钟"、"写 2 小时"等时长而不说具体几点时使用。与 startTime 二选一' },
           category: { type: 'string', description: '分类 id，可选值: work(工作)|study(学习)|fitness(健身)|life(生活)|health(健康)|social(社交)|other(其他)。默认 work' },
           priority: { type: 'string', enum: ['high', 'medium', 'low'], description: '优先级，默认 medium' },
-          remindAt: { type: 'number', description: '提前多少分钟提醒，默认 0 表示不提醒。常用值 5, 15, 30, 60' },
+          remindAt: { type: 'number', description: '提前多少分钟提醒。仅对"定时"模式有效。默认不提醒' },
         },
-        required: ['title', 'date', 'startTime'],
+        required: ['title', 'date'],
       },
     },
   },
@@ -42,8 +43,9 @@ export const AI_TOOLS = [
           title: { type: 'string' },
           description: { type: 'string' },
           date: { type: 'string', description: 'YYYY-MM-DD' },
-          startTime: { type: 'string', description: 'HH:mm' },
-          endTime: { type: 'string', description: 'HH:mm' },
+          startTime: { type: 'string', description: 'HH:mm，空字符串表示清除' },
+          endTime: { type: 'string', description: 'HH:mm，空字符串表示清除' },
+          durationMinutes: { type: 'number', description: '花费时长(分钟);切换到时长模式时使用。0 表示清除' },
           category: { type: 'string' },
           priority: { type: 'string', enum: ['high', 'medium', 'low'] },
           remindAt: { type: 'number' },
@@ -88,7 +90,7 @@ export const AI_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'bulkAddTasks',
-      description: '批量新增任务，用于生成重复日程（如"每周三下午 2 点开周会连续 4 周"）。',
+      description: '批量新增任务，用于生成重复日程（如"每周三下午 2 点开周会连续 4 周"）。每条任务同 addTask 的时间三态。',
       parameters: {
         type: 'object',
         properties: {
@@ -101,12 +103,13 @@ export const AI_TOOLS = [
                 date: { type: 'string' },
                 startTime: { type: 'string' },
                 endTime: { type: 'string' },
+                durationMinutes: { type: 'number' },
                 category: { type: 'string' },
                 priority: { type: 'string', enum: ['high', 'medium', 'low'] },
                 remindAt: { type: 'number' },
                 description: { type: 'string' },
               },
-              required: ['title', 'date', 'startTime'],
+              required: ['title', 'date'],
             },
           },
         },
@@ -197,9 +200,13 @@ export async function executeTool(
       case 'addTask': {
         const title = String(args.title || '').trim()
         const date = String(args.date || '').trim()
-        const startTime = normalizeTime(String(args.startTime || ''))
-        if (!title || !date || !startTime) {
-          return { success: false, error: '缺少必填字段: title/date/startTime' }
+        const rawStart = args.startTime ? String(args.startTime).trim() : ''
+        const startTime = rawStart ? normalizeTime(rawStart) : undefined
+        const duration = typeof args.durationMinutes === 'number' && args.durationMinutes > 0
+          ? args.durationMinutes
+          : undefined
+        if (!title || !date) {
+          return { success: false, error: '缺少必填字段: title/date' }
         }
         const form: TaskFormData = {
           title,
@@ -208,11 +215,12 @@ export async function executeTool(
           priority: (args.priority as TaskFormData['priority']) || 'medium',
           date,
           startTime,
-          endTime: computeEndTime(startTime, args.endTime as string),
-          remindAt: typeof args.remindAt === 'number' ? args.remindAt : undefined,
+          endTime: startTime ? computeEndTime(startTime, args.endTime as string) : undefined,
+          durationMinutes: !startTime ? duration : undefined,
+          remindAt: startTime && typeof args.remindAt === 'number' ? args.remindAt : undefined,
         }
         const task = await taskStore.createTask(form)
-        return { success: true, data: { id: task.id, title: task.title, date: task.date, startTime: task.startTime } }
+        return { success: true, data: { id: task.id, title: task.title, date: task.date, startTime: task.startTime, durationMinutes: task.durationMinutes } }
       }
 
       case 'updateTask': {
@@ -227,8 +235,18 @@ export async function executeTool(
         if (args.category !== undefined) patch.category = validCategory(String(args.category))
         if (args.priority !== undefined) patch.priority = args.priority as TaskFormData['priority']
         if (args.date !== undefined) patch.date = String(args.date)
-        if (args.startTime !== undefined) patch.startTime = normalizeTime(String(args.startTime))
-        if (args.endTime !== undefined) patch.endTime = normalizeTime(String(args.endTime))
+        if (args.startTime !== undefined) {
+          const s = String(args.startTime)
+          patch.startTime = s ? normalizeTime(s) : undefined
+        }
+        if (args.endTime !== undefined) {
+          const s = String(args.endTime)
+          patch.endTime = s ? normalizeTime(s) : undefined
+        }
+        if (args.durationMinutes !== undefined) {
+          const n = Number(args.durationMinutes)
+          patch.durationMinutes = n > 0 ? n : undefined
+        }
         if (args.remindAt !== undefined) patch.remindAt = Number(args.remindAt)
 
         const updated = await taskStore.editTask(taskId, patch)
@@ -280,6 +298,7 @@ export async function executeTool(
           date: t.date,
           startTime: t.startTime,
           endTime: t.endTime,
+          durationMinutes: t.durationMinutes,
           category: t.category,
           priority: t.priority,
           isCompleted: t.isCompleted,
@@ -297,8 +316,12 @@ export async function executeTool(
         for (const raw of rawTasks as Array<Record<string, unknown>>) {
           const title = String(raw.title || '').trim()
           const date = String(raw.date || '').trim()
-          const startTime = normalizeTime(String(raw.startTime || ''))
-          if (!title || !date || !startTime) continue
+          if (!title || !date) continue
+          const rawStart = raw.startTime ? String(raw.startTime).trim() : ''
+          const startTime = rawStart ? normalizeTime(rawStart) : undefined
+          const duration = typeof raw.durationMinutes === 'number' && raw.durationMinutes > 0
+            ? raw.durationMinutes
+            : undefined
           forms.push({
             title,
             description: raw.description ? String(raw.description) : undefined,
@@ -306,8 +329,9 @@ export async function executeTool(
             priority: (raw.priority as TaskFormData['priority']) || 'medium',
             date,
             startTime,
-            endTime: computeEndTime(startTime, raw.endTime as string),
-            remindAt: typeof raw.remindAt === 'number' ? raw.remindAt : undefined,
+            endTime: startTime ? computeEndTime(startTime, raw.endTime as string) : undefined,
+            durationMinutes: !startTime ? duration : undefined,
+            remindAt: startTime && typeof raw.remindAt === 'number' ? raw.remindAt : undefined,
           })
         }
         const count = await taskStore.createTasksBulk(forms)
@@ -361,14 +385,17 @@ export function buildSystemPrompt(extra?: string): string {
 
 工作规则:
 1. 用户说"明天"、"下周三"等相对日期时，转换为绝对日期(YYYY-MM-DD)后再调用工具。
-2. 时间没说结束时间时，默认持续 1 小时。
-3. 除非用户明确说要提醒，否则 remindAt 留空（即不提醒）。用户说"提前 X 分钟提醒"时才设置。
+2. 时间安排有三种模式,按用户话语判断:
+   a. 用户说明具体时间点(如"下午 3 点"、"14:00 开始"):使用 startTime,若未说结束时间则默认 start+1h(endTime 可留空由系统补)
+   b. 用户只说时长而没说具体几点(如"读 30 分钟单词"、"写 2 小时代码"):使用 durationMinutes,不填 startTime
+   c. 用户只说"当天做"没提时间(如"记得取快递"):都不填,归为全天待办
+3. 除非用户明确说要提醒,否则 remindAt 留空。用户说"提前 X 分钟提醒"时才设置。提醒只对定时模式有效。
 4. 修改或删除任务前，如果不知道 taskId，先用 queryTasks 找到对应任务。
 5. 删除操作会弹出用户确认框，你不用担心，直接调用即可。
 6. 批量重复日程（每周会议等）使用 bulkAddTasks 一次性提交。
 7. 记录饮食用 addMeal。用户没说 mealType 时，根据时间推断（早/中/晚/加餐）。
 8. 简洁友好，操作完成后用一两句话告知用户结果。不要输出 JSON 或工具调用细节。
-9. 如果用户请求含糊（比如没说日期、时间），先问清再操作，不要瞎猜。`
+9. 如果用户请求含糊（比如没说日期），先问清再操作，不要瞎猜。`
 
   if (extra) {
     return base + `\n\n--- 学习会话额外信息 ---\n${extra}`

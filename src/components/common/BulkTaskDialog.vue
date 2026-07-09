@@ -26,14 +26,29 @@ const bulk = ref<BulkPlanParams>({
   daysOfWeek: [1],
   startTime: '20:00',
   endTime: '21:00',
+  durationMinutes: undefined,
 })
+
+// 批量时间模式
+type BulkTimeMode = 'timed' | 'duration' | 'anytime'
+const bulkTimeMode = ref<BulkTimeMode>('timed')
+const bulkDurationInput = ref(60)
 
 const weekdays = [
   { v: 1, l: '一' }, { v: 2, l: '二' }, { v: 3, l: '三' },
   { v: 4, l: '四' }, { v: 5, l: '五' }, { v: 6, l: '六' }, { v: 0, l: '日' },
 ]
 
-const bulkPreview = computed(() => previewBulkPlan(bulk.value))
+const bulkPreview = computed(() => {
+  // 根据模式装配临时 params 传给预览
+  const p: BulkPlanParams = {
+    ...bulk.value,
+    startTime: bulkTimeMode.value === 'timed' ? bulk.value.startTime : undefined,
+    endTime: bulkTimeMode.value === 'timed' ? bulk.value.endTime : undefined,
+    durationMinutes: bulkTimeMode.value === 'duration' ? bulkDurationInput.value : undefined,
+  }
+  return previewBulkPlan(p)
+})
 
 function toggleWeekday(v: number) {
   const idx = bulk.value.daysOfWeek.indexOf(v)
@@ -78,11 +93,21 @@ async function confirmBulkCreate() {
     excelMessage.value = '请至少选择一个星期'
     return
   }
-  if (bulk.value.endTime <= bulk.value.startTime) {
+  if (bulkTimeMode.value === 'timed' && (bulk.value.endTime ?? '') <= (bulk.value.startTime ?? '')) {
     excelMessage.value = '结束时间必须晚于开始时间'
     return
   }
-  const items = expandBulkPlan(bulk.value)
+  if (bulkTimeMode.value === 'duration' && !(bulkDurationInput.value > 0)) {
+    excelMessage.value = '请填写有效的时长'
+    return
+  }
+  const params: BulkPlanParams = {
+    ...bulk.value,
+    startTime: bulkTimeMode.value === 'timed' ? bulk.value.startTime : undefined,
+    endTime: bulkTimeMode.value === 'timed' ? bulk.value.endTime : undefined,
+    durationMinutes: bulkTimeMode.value === 'duration' ? bulkDurationInput.value : undefined,
+  }
+  const items = expandBulkPlan(params)
   if (items.length === 0) {
     excelMessage.value = '生成结果为空,请检查日期范围'
     return
@@ -125,9 +150,15 @@ async function confirmBulkCreate() {
       <div v-if="tab === 'excel'" class="tab-content">
         <div class="section">
           <p class="help">
-            规范:表头固定为 <b>日期 / 开始时间 / 结束时间 / 标题 / 分类 / 优先级 / 描述</b>。
-            日期支持 <code>2026-07-01</code>、<code>2026/7/1</code> 或 Excel 日期格式;
-            时间为 24 小时制 <code>HH:mm</code>;分类支持工作/学习/生活/健康/社交/其他;
+            规范:表头固定为 <b>日期 / 开始时间 / 结束时间 / 时长(分钟) / 标题 / 分类 / 优先级 / 描述</b>。
+            时间字段三种填法:
+            <br />
+            ① 同时填开始/结束时间 → 定时任务;
+            ② 只填时长(其他留空) → 花费时长任务;
+            ③ 都留空 → 全天待办。
+            <br />
+            日期支持 <code>2026-07-01</code>、<code>2026/7/1</code> 或 Excel 日期;
+            时间为 24 小时制 <code>HH:mm</code>;
             优先级支持 高/中/低。
           </p>
           <div class="btn-row">
@@ -155,7 +186,11 @@ async function confirmBulkCreate() {
             <div class="preview-title">前 5 条预览:</div>
             <div v-for="(t, i) in excelResult.valid.slice(0, 5)" :key="i" class="preview-item">
               <span class="p-date">{{ t.date }}</span>
-              <span class="p-time">{{ t.startTime }}-{{ t.endTime }}</span>
+              <span class="p-time">
+                <template v-if="t.startTime && t.endTime">{{ t.startTime }}-{{ t.endTime }}</template>
+                <template v-else-if="t.durationMinutes">预计 {{ t.durationMinutes }}m</template>
+                <template v-else>全天</template>
+              </span>
               <span class="p-title">{{ t.title }}</span>
             </div>
           </div>
@@ -201,13 +236,39 @@ async function confirmBulkCreate() {
             <span>结束日期</span>
             <input type="date" v-model="bulk.endDate" />
           </label>
-          <label class="field">
-            <span>开始时间</span>
-            <input type="time" v-model="bulk.startTime" />
+          <label class="field full">
+            <span>时间安排</span>
+            <div class="bulk-time-tabs">
+              <button
+                type="button"
+                :class="{ active: bulkTimeMode === 'timed' }"
+                @click="bulkTimeMode = 'timed'"
+              >⏰ 定时</button>
+              <button
+                type="button"
+                :class="{ active: bulkTimeMode === 'duration' }"
+                @click="bulkTimeMode = 'duration'"
+              >⏳ 时长</button>
+              <button
+                type="button"
+                :class="{ active: bulkTimeMode === 'anytime' }"
+                @click="bulkTimeMode = 'anytime'"
+              >📌 全天</button>
+            </div>
           </label>
-          <label class="field">
-            <span>结束时间</span>
-            <input type="time" v-model="bulk.endTime" />
+          <template v-if="bulkTimeMode === 'timed'">
+            <label class="field">
+              <span>开始时间</span>
+              <input type="time" v-model="bulk.startTime" />
+            </label>
+            <label class="field">
+              <span>结束时间</span>
+              <input type="time" v-model="bulk.endTime" />
+            </label>
+          </template>
+          <label v-else-if="bulkTimeMode === 'duration'" class="field full">
+            <span>预计时长(分钟)</span>
+            <input type="number" min="1" max="1440" v-model.number="bulkDurationInput" />
           </label>
         </div>
 
@@ -313,6 +374,29 @@ async function confirmBulkCreate() {
 }
 
 .tab-content { display: flex; flex-direction: column; gap: 14px; }
+
+.bulk-time-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+
+  button {
+    flex: 1;
+    padding: 8px 6px;
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+
+    &.active {
+      background: var(--color-work);
+      color: white;
+      border-color: var(--color-work);
+    }
+  }
+}
 
 .section { display: flex; flex-direction: column; gap: 10px; }
 

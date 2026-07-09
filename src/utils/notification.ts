@@ -126,6 +126,8 @@ export async function checkReminders(): Promise<ReminderToast[]> {
   for (const task of tasks) {
     if (task.isCompleted) continue
     if (!task.remindAt) continue
+    // 只有定时任务(有 startTime + endTime)才走提醒
+    if (!task.startTime || !task.endTime) continue
 
     const taskStartMinutes = timeToMinutes(task.startTime)
     const remindMinutes = taskStartMinutes - task.remindAt
@@ -206,7 +208,8 @@ export function stopReminderCheck(): void {
 // 发送任务提醒
 export async function sendTaskReminder(task: Task): Promise<void> {
   const title = `任务提醒: ${task.title}`
-  const body = `即将开始 (${task.startTime}) - ${task.description || ''}`
+  const timeText = task.startTime ? `即将开始 (${task.startTime})` : '任务提醒'
+  const body = `${timeText} - ${task.description || ''}`
   await sendNotification(title, body)
 }
 

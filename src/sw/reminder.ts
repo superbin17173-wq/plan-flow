@@ -123,6 +123,8 @@ async function checkAndSendReminders(): Promise<void> {
   for (const task of tasks) {
     if (task.isCompleted) continue
     if (!task.remindAt) continue
+    // 只有定时任务(有 startTime + endTime)才走提醒
+    if (!task.startTime || !task.endTime) continue
 
     const taskStartMinutes = timeToMinutes(task.startTime)
     const remindMinutes = taskStartMinutes - task.remindAt
