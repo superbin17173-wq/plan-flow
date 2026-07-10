@@ -98,10 +98,12 @@ function handleMenuCommand(cmd: string) {
       <button class="action-btn desktop-only" @click="toggleStats" title="统计">
         <span>📊</span>
       </button>
-      <button class="action-btn desktop-only" @click="showSettings = true" title="设置">
+
+      <!-- 移动端也显示的常用按钮 -->
+      <button class="action-btn" @click="showSettings = true" title="设置">
         <span>⚙️</span>
       </button>
-      <ThemeToggle class="desktop-only" />
+      <ThemeToggle />
 
       <!-- 移动端才显示的溢出菜单 -->
       <ElDropdown class="mobile-only" trigger="click" @command="handleMenuCommand" placement="bottom-end">
@@ -260,9 +262,9 @@ function handleMenuCommand(cmd: string) {
   .header-right { gap: 2px; }
 
   .action-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 16px;
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
   }
 
   .mobile-only { display: flex; }

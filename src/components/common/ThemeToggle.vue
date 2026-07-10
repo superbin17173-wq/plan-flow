@@ -45,13 +45,31 @@ function toggleTheme() {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  border: none;
+  cursor: pointer;
 
   &:hover {
     background: var(--bg-hover);
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 }
 
 .theme-icon {
   font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .theme-toggle {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+
+  .theme-icon {
+    font-size: 16px;
+  }
 }
 </style>
