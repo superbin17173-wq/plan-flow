@@ -250,7 +250,7 @@ function handleMouseUp() {
   }
 
   &.priority-high {
-    border-left: 4px solid #E74C3C;
+    border-left: 4px solid var(--ios-red);
   }
 
   &.priority-low {

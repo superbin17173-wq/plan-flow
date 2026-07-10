@@ -754,11 +754,13 @@ watch(recurrenceType, (type) => {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格任务表单
+// iOS 任务表单（bottom sheet）
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -766,15 +768,16 @@ watch(recurrenceType, (type) => {
 }
 
 .modal-content {
-  background: #F2F2F7;
-  border-radius: 20px 20px 0 0;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xxl) var(--radius-xxl) 0 0;
   width: 100%;
-  max-width: 500px;
-  max-height: 85vh;
+  max-width: 520px;
+  max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom, 20px);
+  padding-bottom: var(--safe-bottom);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
@@ -782,85 +785,93 @@ watch(recurrenceType, (type) => {
   align-items: center;
   justify-content: center;
   padding: 16px 20px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E5EA;
+  background: var(--bg-card);
+  border-bottom: 0.5px solid var(--separator);
   position: relative;
 
   h2 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1A1A1A;
+    font-size: var(--font-size-headline);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 
   .close-btn {
     position: absolute;
-    right: 16px;
-    width: 32px;
-    height: 32px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: transparent;
-    color: #8E8E93;
-    font-size: 24px;
+    background: var(--bg-fill-quaternary);
+    color: var(--text-secondary);
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+
+    &:hover { background: var(--bg-pressed); }
   }
 }
 
 .modal-body {
-  padding: 20px 16px;
+  padding: 18px 16px 22px;
   overflow-y: auto;
   flex: 1;
-  background: #F2F2F7;
+  background: var(--bg-primary);
 }
 
-.form-group {
-  margin-bottom: 20px;
-}
+.form-group { margin-bottom: 18px; }
 
 .form-row {
   display: flex;
   gap: 12px;
-
   .half { flex: 1; }
 }
 
 .form-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #8E8E93;
-  margin-bottom: 8px;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
   display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 
   &.required::after {
     content: '*';
-    color: #FF3B30;
+    color: var(--ios-red);
     margin-left: 4px;
   }
 }
 
 .form-input {
   width: 100%;
-  padding: 14px 16px;
-  border: none;
-  border-radius: 12px;
-  background: #FFFFFF;
-  color: #1A1A1A;
-  font-size: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 12px 14px;
+  min-height: 44px;
+  border: 0.5px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+  &::placeholder { color: var(--text-tertiary); }
 
   &:focus {
     outline: none;
-    box-shadow: 0 2px 8px rgba(0,122,255,0.2);
+    border-color: var(--ios-blue);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
   }
 
   &.textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 88px;
   }
 }
 
-// iOS 风格分类按钮
 .category-options {
   display: flex;
   gap: 8px;
@@ -868,40 +879,45 @@ watch(recurrenceType, (type) => {
 }
 
 .category-btn {
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
   color: white;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--font-size-sub);
+  font-weight: 600;
   opacity: 0.6;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform var(--spring);
 
-  &.active {
-    opacity: 1;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
+  &:active { transform: scale(0.96); }
+  &.active { opacity: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.16); }
 }
 
-// iOS 风格优先级按钮
 .priority-options {
   display: flex;
   gap: 8px;
 }
 
 .priority-btn {
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: #FFFFFF;
-  color: #8E8E93;
-  font-size: 14px;
-  display: flex;
+  padding: 10px 14px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sub);
+  font-weight: 500;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
 
   &.active {
-    background: #007AFF;
-    color: #FFFFFF;
-    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+    background: var(--ios-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
   }
 }
 
@@ -911,208 +927,216 @@ watch(recurrenceType, (type) => {
   border-radius: 50%;
 }
 
-// iOS 开关样式
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #FFFFFF;
-  padding: 14px 16px;
-  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 12px 16px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
 }
 
 .toggle-btn {
-  width: 50px;
-  height: 32px;
+  width: 51px;
+  height: 31px;
   border-radius: 16px;
-  background: #E5E5EA;
+  background: var(--bg-fill-quaternary);
   color: transparent;
   font-size: 0;
   position: relative;
   transition: background 0.3s;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 
   &::after {
     content: '';
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 28px;
-    height: 28px;
+    width: 27px;
+    height: 27px;
     border-radius: 14px;
-    background: #FFFFFF;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    transition: transform 0.3s;
+    background: #fff;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.06);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   &.active {
-    background: #34C759;
-
-    &::after {
-      transform: translateX(18px);
-    }
+    background: var(--ios-green);
+    &::after { transform: translateX(20px); }
   }
 }
 
 .recurrence-options, .reminder-options {
-  margin-top: 12px;
+  margin-top: 10px;
   padding: 12px;
-  background: #FFFFFF;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
 }
 
 .weekday-select {
   display: flex;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .weekday-btn {
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: #E5E5EA;
-  color: #8E8E93;
-  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-fill-quaternary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 
   &.active {
-    background: #007AFF;
-    color: #FFFFFF;
+    background: var(--ios-blue);
+    color: #fff;
   }
 }
 
-// iOS 风格底部按钮
+// 底部按钮
 .modal-footer {
   display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #FFFFFF;
-  border-top: 1px solid #E5E5EA;
+  gap: 10px;
+  padding: 14px 16px calc(14px + var(--safe-bottom));
+  background: var(--bg-card);
+  border-top: 0.5px solid var(--separator);
 }
 
 .cancel-btn {
   flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-  background: #E5E5EA;
-  color: #1A1A1A;
-  font-size: 16px;
-  font-weight: 500;
+  padding: 13px;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--bg-fill-quaternary);
+  color: var(--text-primary);
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--spring), opacity var(--transition-fast);
+
+  &:active { transform: scale(0.97); opacity: 0.85; }
 }
 
 .submit-btn {
   flex: 2;
-  padding: 14px;
-  border-radius: 12px;
-  background: #007AFF;
-  color: #FFFFFF;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 13px;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--ios-blue);
+  color: #fff;
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--spring), opacity var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
+
+  &:active { transform: scale(0.97); opacity: 0.9; }
 
   &:disabled {
-    background: #E5E5EA;
-    color: #8E8E93;
+    background: var(--bg-fill-quaternary);
+    color: var(--text-tertiary);
+    box-shadow: none;
   }
 }
 
-// 健身/学习模块保持原有功能样式，仅调整颜色
 .workout-block {
-  background: rgba(255, 59, 48, 0.08);
-  border-radius: 12px;
-  padding: 16px;
+  background: rgba(255, 45, 85, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px;
 }
 
 .study-block {
-  background: rgba(0, 122, 255, 0.08);
-  border-radius: 12px;
-  padding: 16px;
+  background: rgba(88, 86, 214, 0.06);
+  border-radius: var(--radius-md);
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 
-  .form-input, .form-textarea {
-    border-radius: 10px;
-  }
+  .form-input, .form-textarea { border-radius: var(--radius-sm); }
 }
 
 .ebbinghaus-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
-  color: #1A1A1A;
+  font-size: var(--font-size-sub);
+  color: var(--text-primary);
 
   input[type="checkbox"] {
     width: 20px;
     height: 20px;
-    accent-color: #007AFF;
+    accent-color: var(--ios-blue);
   }
 }
 
 .ebbinghaus-preview {
-  background: #FFFFFF;
-  border-radius: 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
   padding: 12px;
 }
 
 .ebbinghaus-day {
-  padding: 6px 12px;
-  background: rgba(0, 122, 255, 0.15);
-  color: #007AFF;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 5px 12px;
+  background: rgba(0, 122, 255, 0.14);
+  color: var(--ios-blue);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
 }
 
-// 动画 - iOS 底部滑入效果
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+// 动画
+.fade-enter-active, .fade-leave-active { transition: opacity 0.24s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .slide-enter-active, .slide-leave-active {
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.slide-enter-from, .slide-leave-to {
-  transform: translateY(100%);
-}
+.slide-enter-from, .slide-leave-to { transform: translateY(100%); }
 
-// 桌面端居中显示
 @media (min-width: 769px) {
-  .modal-overlay {
-    align-items: center;
-  }
-  .modal-content {
-    border-radius: 20px;
-    max-height: 90vh;
-  }
+  .modal-overlay { align-items: center; padding: 16px; }
+  .modal-content { border-radius: var(--radius-xl); max-height: 88vh; }
 }
 
-// 时间模式三态切换
+// 时间模式三态切换（iOS 分段控件）
 .time-mode-tabs {
   display: flex;
-  gap: 8px;
-  background: #FFFFFF;
-  padding: 6px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  gap: 2px;
+  background: var(--bg-fill-quaternary);
+  padding: 2px;
+  border-radius: 9px;
 }
 
 .time-mode-btn {
   flex: 1;
-  padding: 10px 8px;
-  border-radius: 8px;
+  padding: 8px 6px;
+  border-radius: 7px;
   background: transparent;
-  color: #8E8E93;
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sub);
   font-weight: 500;
-  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal);
 
   &.active {
-    background: #007AFF;
-    color: #FFFFFF;
-    box-shadow: 0 2px 6px rgba(0,122,255,0.25);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
 }
+.dark .time-mode-btn.active { background: var(--bg-elevated); }
 
 .duration-presets {
   display: flex;
@@ -1123,16 +1147,20 @@ watch(recurrenceType, (type) => {
 
 .duration-chip {
   padding: 8px 14px;
-  border-radius: 10px;
-  background: #FFFFFF;
-  color: #1A1A1A;
-  font-size: 14px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: var(--font-size-sub);
   font-weight: 500;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-fast);
 
   &.active {
-    background: #007AFF;
-    color: #FFFFFF;
+    background: var(--ios-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.24);
   }
 }
 
@@ -1140,21 +1168,20 @@ watch(recurrenceType, (type) => {
   display: flex;
   align-items: center;
   gap: 10px;
-
   .form-input { flex: 1; }
 }
 
 .duration-unit {
-  font-size: 14px;
-  color: #8E8E93;
+  font-size: var(--font-size-sub);
+  color: var(--text-tertiary);
 }
 
 .anytime-hint {
-  padding: 14px 16px;
-  background: #FFFFFF;
-  border-radius: 12px;
-  color: #8E8E93;
-  font-size: 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  padding: 13px 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sub);
+  line-height: 1.5;
 }
 </style>

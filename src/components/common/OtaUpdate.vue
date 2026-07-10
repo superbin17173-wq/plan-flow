@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { checkForUpdate, downloadAndUpdate, hasDownloadedUpdate, getUpdateIndexPath, type UpdateInfo } from '../../utils/otaUpdate'
+import { checkForUpdate, downloadUpdate, applyBundle, getBundleList, type UpdateInfo } from '../../utils/otaUpdate'
 import { Capacitor } from '@capacitor/core'
-import { Preferences } from '@capacitor/preferences'
-import { APP_VERSION } from '../../utils/version'
+import type { BundleInfo } from '@capgo/capacitor-updater'
 
 const showUpdateDialog = ref(false)
 const updateInfo = ref<UpdateInfo | null>(null)
@@ -14,48 +13,20 @@ const updateError = ref('')
 const showSuccessToast = ref(false)
 const successVersion = ref('')
 
-// 检查上次更新是否成功（启动时对比版本号）
-async function checkUpdateSuccess() {
-  if (!Capacitor.isNativePlatform()) return
+// 下载好的 bundle,点"立即启用"时用
+const downloadedBundle = ref<BundleInfo | null>(null)
 
-  const { value: pendingVersion } = await Preferences.get({ key: 'ota_pending_version' })
-  if (pendingVersion && pendingVersion === APP_VERSION) {
-    // 已经在新版本上运行
-    successVersion.value = pendingVersion
-    showSuccessToast.value = true
-    // 清除标记
-    await Preferences.remove({ key: 'ota_pending_version' })
-    // 3秒后自动隐藏
-    setTimeout(() => {
-      showSuccessToast.value = false
-    }, 3500)
-  }
-}
-
-// 检查并加载已下载的更新
-async function loadDownloadedUpdate() {
-  if (!Capacitor.isNativePlatform()) return
-
-  const hasUpdate = await hasDownloadedUpdate()
-  if (!hasUpdate) return
-
-  const indexPath = await getUpdateIndexPath()
-  if (!indexPath) return
-
-  if (Capacitor.getPlatform() === 'android') {
-    console.log('OTA: 加载已下载的更新', indexPath)
-    window.location.href = indexPath
-  }
+// 诊断日志(手机上直接可见,不用连 logcat)
+const diagLog = ref<string[]>([])
+const showDiag = ref(false)
+function log(msg: string) {
+  const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+  diagLog.value.push(`[${ts}] ${msg}`)
+  if (diagLog.value.length > 40) diagLog.value.shift()
 }
 
 async function checkUpdate() {
   if (!Capacitor.isNativePlatform()) return
-
-  // 先检查上次更新是否成功
-  await checkUpdateSuccess()
-
-  // 检查是否有已下载的更新
-  await loadDownloadedUpdate()
 
   const info = await checkForUpdate()
   if (info.hasUpdate) {
@@ -65,43 +36,60 @@ async function checkUpdate() {
 }
 
 async function doUpdate() {
+  if (!updateInfo.value) return
   downloading.value = true
   updateError.value = ''
   progress.value = 0
+  log(`doUpdate: 目标版本=${updateInfo.value.version},当前=${updateInfo.value.localVersion}`)
 
-  const result = await downloadAndUpdate((p: number) => {
+  const result = await downloadUpdate(updateInfo.value.version, (p) => {
     progress.value = p
   })
 
-  if (result.success) {
+  if (result.success && result.bundle) {
+    downloadedBundle.value = result.bundle
     updateDone.value = true
-    // 保存目标版本号，下次启动时比对
-    if (updateInfo.value?.version) {
-      await Preferences.set({ key: 'ota_pending_version', value: updateInfo.value.version })
-    }
+    log(`✓ 下载完成 bundle=${JSON.stringify(result.bundle)}`)
+    log(`native list: ${await getBundleList()}`)
   } else {
-    updateError.value = result.error || '更新失败，请重试'
+    updateError.value = result.error || '更新失败,请重试'
     downloading.value = false
+    log(`❌ 下载失败: ${result.error}`)
+    showDiag.value = true
   }
 }
 
-// 手动重启加载新版本
+// 立即启用: 切换 WebView 到新 bundle
 async function reloadNow() {
-  const indexPath = await getUpdateIndexPath()
-  if (indexPath) {
-    window.location.href = indexPath
-  } else {
-    window.location.reload()
+  if (!downloadedBundle.value) {
+    log('reloadNow: downloadedBundle 为空,退出')
+    return
+  }
+  try {
+    log(`reloadNow: 开始,bundle=${JSON.stringify(downloadedBundle.value)}`)
+    log(`native list(before): ${await getBundleList()}`)
+    // 应用后 JS 上下文会立刻被销毁,后续代码不会执行
+    const result = await applyBundle(downloadedBundle.value)
+    // 走到这里说明 set() 没触发 reload,是 bug
+    log(`⚠️ set 已返回但 WebView 未 reload`)
+    log(`诊断: ${result.diagnosticsAfterSet}`)
+    showDiag.value = true
+    updateError.value = 'set() 已调用但 WebView 未重启,请展开诊断日志'
+  } catch (err) {
+    const msg = err instanceof Error ? (err.stack || err.message) : String(err)
+    log(`❌ applyBundle 抛错: ${msg}`)
+    showDiag.value = true
+    updateError.value = err instanceof Error ? err.message : '应用失败'
   }
 }
 
 function skipUpdate() {
   showUpdateDialog.value = false
-  // 重置状态
   downloading.value = false
   updateDone.value = false
   progress.value = 0
   updateError.value = ''
+  downloadedBundle.value = null
 }
 
 function dismissSuccessToast() {
@@ -110,6 +98,15 @@ function dismissSuccessToast() {
 
 onMounted(() => {
   checkUpdate()
+})
+
+// 供外部触发: 显示"更新成功"toast(App.vue 里 notifyAppReady 后可选调用)
+defineExpose({
+  showUpdateSuccessToast(version: string) {
+    successVersion.value = version
+    showSuccessToast.value = true
+    setTimeout(() => { showSuccessToast.value = false }, 3500)
+  },
 })
 </script>
 
@@ -157,6 +154,14 @@ onMounted(() => {
             <p>⚠️ {{ updateError }}</p>
           </div>
 
+          <!-- 诊断日志(默认折叠,点击展开;手机上直接能看,不用连 logcat) -->
+          <div v-if="diagLog.length > 0" class="ota-diag">
+            <button class="diag-toggle" @click="showDiag = !showDiag">
+              {{ showDiag ? '▼' : '▶' }} 诊断日志 ({{ diagLog.length }})
+            </button>
+            <pre v-if="showDiag" class="diag-content">{{ diagLog.join('\n') }}</pre>
+          </div>
+
           <!-- 未开始更新时 -->
           <div v-if="!downloading && !updateDone && !updateError" class="ota-actions">
             <button class="btn-skip" @click="skipUpdate">稍后再说</button>
@@ -180,11 +185,13 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格 OTA 更新对话框
+// iOS OTA
 .ota-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -193,13 +200,14 @@ onMounted(() => {
 }
 
 .ota-dialog {
-  background: #FFFFFF;
-  border-radius: 20px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-xl);
   padding: 28px 24px 24px;
   max-width: 320px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
+  color: var(--text-primary);
 }
 
 .ota-icon {
@@ -208,47 +216,48 @@ onMounted(() => {
 }
 
 h3 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0 0 16px;
-  color: #1A1A1A;
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .ota-info {
   p {
-    font-size: 15px;
-    color: #8E8E93;
-    margin: 8px 0;
+    font-size: var(--font-size-sub);
+    color: var(--text-secondary);
+    margin: 6px 0;
 
-    b { color: #007AFF; }
+    b { color: var(--ios-blue); font-weight: 700; }
   }
 
   .build-time {
-    font-size: 12px;
-    color: #C7C7CC;
-    margin-top: 12px;
+    font-size: var(--font-size-caption);
+    color: var(--text-tertiary);
+    margin-top: 10px;
   }
 }
 
 .ota-progress {
   .progress-bar {
     height: 6px;
-    background: #E5E5EA;
+    background: var(--separator-opaque);
     border-radius: 3px;
     overflow: hidden;
     margin: 16px 0;
 
     .progress-fill {
       height: 100%;
-      background: #007AFF;
+      background: var(--ios-blue);
       border-radius: 3px;
       transition: width 0.3s;
     }
   }
 
   p {
-    font-size: 14px;
-    color: #8E8E93;
+    font-size: var(--font-size-sub);
+    color: var(--text-secondary);
   }
 }
 
@@ -256,78 +265,110 @@ h3 {
   padding: 8px 0;
 
   .success-line {
-    font-size: 16px;
-    color: #34C759;
-    font-weight: 600;
+    font-size: var(--font-size-callout);
+    color: var(--ios-green);
+    font-weight: 700;
     margin-bottom: 6px;
   }
 
   .hint-line {
-    font-size: 13px;
-    color: #8E8E93;
+    font-size: var(--font-size-footnote);
+    color: var(--text-tertiary);
   }
 }
 
 .ota-error {
   p {
-    font-size: 15px;
-    color: #FF3B30;
+    font-size: var(--font-size-sub);
+    color: var(--ios-red);
     line-height: 1.5;
+  }
+}
+
+.ota-diag {
+  margin-top: 12px;
+  text-align: left;
+
+  .diag-toggle {
+    background: transparent;
+    border: none;
+    color: var(--ios-blue);
+    font-size: var(--font-size-footnote);
+    padding: 4px 0;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .diag-content {
+    margin-top: 6px;
+    max-height: 240px;
+    overflow: auto;
+    background: var(--bg-fill-quaternary);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-all;
   }
 }
 
 .ota-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 10px;
+  margin-top: 22px;
 
   button {
     flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 500;
+    padding: 13px;
+    min-height: 48px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-callout);
+    font-weight: 600;
     cursor: pointer;
     border: none;
-    transition: all 0.2s;
+    transition: transform var(--spring), opacity var(--transition-fast);
+
+    &:active { transform: scale(0.97); opacity: 0.9; }
   }
 
   .btn-skip {
-    background: #E5E5EA;
-    color: #1A1A1A;
-
-    &:active { opacity: 0.7; }
+    background: var(--bg-fill-quaternary);
+    color: var(--text-primary);
   }
 
   .btn-update {
-    background: #007AFF;
-    color: white;
-
-    &:active { opacity: 0.85; }
+    background: var(--ios-blue);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
   }
 }
 
-// 成功提示 Toast
+// 成功 Toast
 .ota-success-toast {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 20px) + 12px);
+  top: calc(var(--safe-top) + 12px);
   left: 16px;
   right: 16px;
-  background: #FFFFFF;
-  border-radius: 16px;
+  background: var(--material-thick);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-lg);
   padding: 14px 18px;
   display: flex;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 10000;
-  max-width: 400px;
+  max-width: 420px;
   margin: 0 auto;
   cursor: pointer;
+  color: var(--text-primary);
 
-  .toast-icon {
-    font-size: 28px;
-  }
+  .toast-icon { font-size: 26px; }
 
   .toast-content {
     flex: 1;
@@ -335,34 +376,27 @@ h3 {
   }
 
   .toast-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1A1A1A;
+    font-size: var(--font-size-callout);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 
   .toast-subtitle {
-    font-size: 13px;
-    color: #8E8E93;
+    font-size: var(--font-size-footnote);
+    color: var(--text-tertiary);
     margin-top: 2px;
   }
 }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.25s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .toast-enter-active, .toast-leave-active {
-  transition: all 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.24s;
 }
-.toast-enter-from {
+.toast-enter-from, .toast-leave-to {
   opacity: 0;
-  transform: translateY(-20px);
-}
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
+  transform: translateY(-24px);
 }
 </style>

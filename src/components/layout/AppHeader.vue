@@ -125,14 +125,17 @@ function handleMenuCommand(cmd: string) {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格顶部导航
+// iOS 毛玻璃顶部导航
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: #F2F2F7;
-  border-bottom: 1px solid #E5E5EA;
+  padding: 10px 16px calc(10px + var(--safe-top, 0px));
+  padding-top: calc(10px + var(--safe-top, 0px));
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-bottom: 0.5px solid var(--separator);
   flex-wrap: nowrap;
   gap: 12px;
   position: sticky;
@@ -148,41 +151,50 @@ function handleMenuCommand(cmd: string) {
 }
 
 .app-title {
-  font-size: 20px;
+  font-size: var(--font-size-title3);
   font-weight: 700;
-  color: #007AFF;
+  color: var(--ios-blue);
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
 .nav-group {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+  align-items: center;
 }
 
 .nav-btn {
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 7px 12px;
+  min-width: 34px;
+  border-radius: 9px;
   background: transparent;
-  color: #007AFF;
-  font-size: 16px;
-  transition: all 0.2s;
+  color: var(--ios-blue);
+  font-size: 17px;
+  font-weight: 500;
+  transition: background var(--transition-fast), transform var(--spring);
   white-space: nowrap;
+  border: none;
+  cursor: pointer;
 
-  &:active { opacity: 0.7; }
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.94); background: var(--bg-pressed); }
 
   &.today {
-    font-size: 15px;
-    background: #007AFF;
-    color: white;
-    padding: 8px 16px;
-    font-weight: 500;
+    font-size: var(--font-size-sub);
+    background: var(--ios-blue);
+    color: #fff;
+    padding: 7px 14px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.28);
   }
 }
 
 .view-title {
-  font-size: 17px;
+  font-size: var(--font-size-headline);
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
@@ -194,7 +206,7 @@ function handleMenuCommand(cmd: string) {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -203,16 +215,17 @@ function handleMenuCommand(cmd: string) {
   height: 36px;
   border-radius: 10px;
   background: transparent;
-  color: #007AFF;
-  font-size: 18px;
+  color: var(--ios-blue);
+  font-size: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: background var(--transition-fast), transform var(--spring);
+  border: none;
+  cursor: pointer;
 
-  &:active {
-    opacity: 0.6;
-  }
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.9); background: var(--bg-pressed); }
 }
 
 .mobile-only { display: none; }
@@ -220,57 +233,36 @@ function handleMenuCommand(cmd: string) {
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 10px 12px;
+    padding: 8px 12px;
     gap: 6px;
-    background: #F2F2F7;
   }
 
-  .header-left { gap: 8px; }
+  .header-left { gap: 6px; }
   .app-title { display: none; }
 
   .view-title {
     display: block;
-    font-size: 18px;
+    font-size: var(--font-size-callout);
     font-weight: 600;
-    color: #1A1A1A;
   }
 
-  .nav-group { gap: 4px; }
+  .nav-group { gap: 2px; }
   .nav-btn {
     padding: 6px 10px;
-    font-size: 15px;
+    font-size: 16px;
 
     &.today {
-      font-size: 14px;
-      padding: 7px 14px;
-    }
-  }
-
-  .header-center {
-    :deep(.view-switcher) {
-      background: #FFFFFF;
-      border-radius: 8px;
-      padding: 2px;
-    }
-    :deep(.view-btn) {
+      font-size: 13px;
       padding: 6px 12px;
-      font-size: 14px;
-      color: #1A1A1A;
-
-      &.active {
-        background: #007AFF;
-        color: white;
-      }
     }
   }
 
-  .header-right { gap: 4px; }
+  .header-right { gap: 2px; }
 
   .action-btn {
     width: 34px;
     height: 34px;
     font-size: 16px;
-    color: #007AFF;
   }
 
   .mobile-only { display: flex; }

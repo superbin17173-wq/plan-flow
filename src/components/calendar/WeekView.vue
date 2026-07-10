@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import dayjs from 'dayjs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
-import { getTaskPosition, isTimedTask } from '../../utils/timeUtils'
-import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
-import TaskBlock from './TaskBlock.vue'
+import { isTimedTask } from '../../utils/timeUtils'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
-const now = useNow()
 
 // 周日期列表
 const weekDates = computed(() => {
@@ -30,297 +27,250 @@ const weekDates = computed(() => {
   return dates
 })
 
-// 星期标题
 const weekdays = computed(() => {
   const weekStartsOn = settingStore.settings.weekStartsOn
-  const names = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  if (weekStartsOn === 1) {
-    return ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-  }
-  return names
+  if (weekStartsOn === 1) return ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 })
 
-// 小时列表 (0-23)
-const hours = Array.from({ length: 24 }, (_, i) => i)
-
-// 判断是否是今天
 function isToday(date: Date): boolean {
   return dayjs(date).isSame(dayjs(), 'day')
 }
 
-// 获取日期字符串
 function formatDate(date: Date): string {
   return dayjs(date).format('YYYY-MM-DD')
 }
 
-// 获取某天的任务
 function getDayTasks(date: Date) {
-  const dateStr = formatDate(date)
-  return taskStore.getTasksByDate(dateStr)
+  return taskStore.getTasksByDate(formatDate(date)).slice().sort((a: any, b: any) => {
+    // 定时的按 startTime，未定时的排后
+    const at = isTimedTask(a) ? (a.startTime || '') : 'zz'
+    const bt = isTimedTask(b) ? (b.startTime || '') : 'zz'
+    return at.localeCompare(bt)
+  })
 }
 
-// 获取某天的定时任务(用于时间轴)
-function getDayTimedTasks(date: Date) {
-  return getDayTasks(date).filter(isTimedTask)
+function formatDuration(m: number): string {
+  if (m >= 60) {
+    const h = m / 60
+    return `${Number.isInteger(h) ? h : h.toFixed(1)}h`
+  }
+  return `${m}m`
 }
 
-// 获取某天的未排时段任务数
-function getDayUnscheduledCount(date: Date) {
-  return getDayTasks(date).filter(t => !isTimedTask(t)).length
+function timeLabel(task: any): string {
+  if (isTimedTask(task)) {
+    return task.endTime ? `${task.startTime}-${task.endTime}` : task.startTime
+  }
+  if (task.durationMinutes != null) return `⏳ ${formatDuration(task.durationMinutes)}`
+  return '📌 全天'
 }
 
-// 点击日期列
-function handleColumnClick(date: Date) {
-  const dateStr = formatDate(date)
-  uiStore.selectDate(dateStr)
-}
-
-// 点击空白时间创建任务
-function handleTimeSlotClick(date: Date, hour: number, e: MouseEvent) {
-  if (isPastHour(formatDate(date), hour, now.value)) return
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const y = e.clientY - rect.top
-  const minuteOffset = Math.floor((y / 60) * 60)
-  const startHour = Math.min(hour + Math.floor(minuteOffset / 60), 23)
-  const startTime = `${String(startHour).padStart(2, '0')}:${String(minuteOffset % 60).padStart(2, '0')}`
-  const endTime = `${String(Math.min(startHour + 1, 23)).padStart(2, '0')}:${String(minuteOffset % 60).padStart(2, '0')}`
-  uiStore.openTaskForm(undefined, formatDate(date), startTime)
-}
-
-function hourIsPast(date: Date, hour: number): boolean {
-  return isPastHour(formatDate(date), hour, now.value)
-}
-
-function taskIsPast(date: Date, task: any): boolean {
-  if (!task.endTime) return false
-  return isPastTime(formatDate(date), task.endTime, now.value)
-}
-
-// 拖拽处理
-const draggingTask = ref<string | null>(null)
-const dragStartY = ref(0)
-const dragOriginalTop = ref(0)
-const dragOriginalHeight = ref(0)
-
-function startDrag(taskId: string, startY: number, originalTop: number, originalHeight: number) {
-  draggingTask.value = taskId
-  dragStartY.value = startY
-  dragOriginalTop.value = originalTop
-  dragOriginalHeight.value = originalHeight
-}
-
-function endDrag() {
-  draggingTask.value = null
+function selectDay(date: Date) {
+  uiStore.selectDate(formatDate(date))
+  uiStore.setView('day')
 }
 </script>
 
 <template>
   <div class="week-calendar">
-    <!-- 周标题 -->
-    <div class="week-header">
-      <div class="time-header">时间</div>
-      <div
+    <div class="week-list">
+      <section
         v-for="(date, index) in weekDates"
         :key="index"
-        class="day-header-cell"
+        class="day-section"
         :class="{ today: isToday(date) }"
-        @click="handleColumnClick(date)"
       >
-        <div class="weekday-name">{{ weekdays[index] }}</div>
-        <div class="day-date">{{ dayjs(date).format('DD') }}</div>
-        <div v-if="getDayUnscheduledCount(date) > 0" class="unsched-dot" :title="`${getDayUnscheduledCount(date)} 项未排时段`">·{{ getDayUnscheduledCount(date) }}</div>
-      </div>
-    </div>
-
-    <!-- 周内容 -->
-    <div class="week-body">
-      <!-- 时间轴 -->
-      <div class="time-axis">
-        <div v-for="hour in hours" :key="hour" class="hour-label">
-          {{ String(hour).padStart(2, '0') }}:00
-        </div>
-      </div>
-
-      <!-- 日期列 -->
-      <div class="week-columns">
-        <div
-          v-for="(date, index) in weekDates"
-          :key="index"
-          class="day-column"
-          @click="handleColumnClick(date)"
-        >
-          <!-- 小时网格背景 -->
-          <div class="hour-grid">
-            <div
-              v-for="hour in hours"
-              :key="hour"
-              class="hour-slot"
-              :class="{ past: hourIsPast(date, hour) }"
-              @click.stop="handleTimeSlotClick(date, hour, $event)"
-            ></div>
+        <button class="day-header-btn" @click="selectDay(date)">
+          <div class="day-header-left">
+            <span class="weekday-name">{{ weekdays[index] }}</span>
+            <span class="day-date-num">{{ dayjs(date).format('DD') }}</span>
+            <span v-if="isToday(date)" class="today-badge">今天</span>
           </div>
+          <div class="day-header-right">
+            <span v-if="getDayTasks(date).length > 0" class="day-count">
+              {{ getDayTasks(date).length }} 项
+            </span>
+            <span v-else class="day-empty-hint">无计划</span>
+            <span class="row-arrow">›</span>
+          </div>
+        </button>
 
-          <!-- 任务块(仅定时任务) -->
-          <TaskBlock
-            v-for="task in getDayTimedTasks(date)"
+        <div v-if="getDayTasks(date).length > 0" class="task-list">
+          <button
+            v-for="task in getDayTasks(date)"
             :key="task.id"
-            :task="task"
-            :hour-height="60"
-            :is-dragging="draggingTask === task.id"
-            :is-past="taskIsPast(date, task)"
-            @drag-start="startDrag"
-            @drag-end="endDrag"
-            @click.stop="uiStore.openTaskCard(task.id)"
-          />
+            class="task-row"
+            :class="{ done: task.isCompleted }"
+            :style="{ '--task-color': task.color }"
+            @click="uiStore.openTaskCard(task.id)"
+          >
+            <span class="row-dot" :style="{ backgroundColor: task.color }"></span>
+            <span class="row-time">{{ timeLabel(task) }}</span>
+            <span class="row-title">{{ task.title }}</span>
+          </button>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-// iOS 风格周视图
+// iOS 周视图（列表模式）
 .week-calendar {
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  border-radius: 12px;
-  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 4px 0 calc(20px + var(--safe-bottom));
 }
 
-.week-header {
+.week-list {
   display: flex;
-  background: #F2F2F7;
-  border-bottom: 1px solid #E5E5EA;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
 }
 
-.time-header {
-  width: 60px;
-  flex-shrink: 0;
-  padding: 12px 8px;
-  font-size: 12px;
-  color: #8E8E93;
-  text-align: center;
-}
-
-.day-header-cell {
-  flex: 1;
-  padding: 12px 8px;
-  text-align: center;
-  cursor: pointer;
-
-  &:active {
-    background: #E5E5EA;
-  }
+.day-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 
   &.today {
-    background: rgba(0, 122, 255, 0.08);
-
-    .day-date {
-      background: #007AFF;
-      color: white;
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-    }
+    .day-date-num { color: var(--ios-blue); font-weight: 700; }
   }
+}
+
+.day-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 8px 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+
+  &:active { opacity: 0.75; }
+}
+
+.day-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .weekday-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.unsched-dot {
-  margin-top: 2px;
-  font-size: 10px;
-  color: #FF9500;
+.day-date-num {
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.today-badge {
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  color: #fff;
+  background: var(--ios-blue);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.day-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-count {
+  font-size: var(--font-size-footnote);
+  color: var(--ios-blue);
   font-weight: 600;
 }
 
-.day-date {
-  font-size: 15px;
-  margin-top: 4px;
-  color: #1A1A1A;
+.day-empty-hint {
+  font-size: var(--font-size-footnote);
+  color: var(--text-quaternary);
 }
 
-.week-body {
+.row-arrow {
+  color: var(--text-quaternary);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.task-list {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.task-row {
+  --task-color: var(--ios-blue);
+  width: 100%;
   display: flex;
-  overflow-y: auto;
-  max-height: 70vh;
-}
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  min-height: 44px;
+  background: var(--bg-card);
+  border: none;
+  border-left: 3px solid var(--task-color);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
 
-.time-axis {
-  width: 60px;
-  flex-shrink: 0;
-  background: #F2F2F7;
-  border-right: 1px solid #E5E5EA;
-  display: flex;
-  flex-direction: column;
-}
+  &:active { background: var(--bg-pressed); }
 
-.hour-label {
-  height: 60px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #8E8E93;
-  border-bottom: 1px solid #E5E5EA;
-  box-sizing: border-box;
-}
-
-.week-columns {
-  flex: 1;
-  display: flex;
-}
-
-.day-column {
-  flex: 1;
-  position: relative;
-  border-right: 1px solid #E5E5EA;
-  min-height: 1440px;
-
-  &:last-child {
-    border-right: none;
-  }
-}
-
-.hour-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-}
-
-.hour-slot {
-  height: 60px;
-  flex-shrink: 0;
-  border-bottom: 1px solid #E5E5EA;
-  pointer-events: auto;
-  box-sizing: border-box;
-
-  &:active {
-    background: rgba(0, 122, 255, 0.08);
+  & + .task-row {
+    border-top: 0.5px solid var(--separator);
   }
 
-  &.past {
-    background: rgba(0, 0, 0, 0.03);
-    cursor: not-allowed;
+  &.done {
+    opacity: 0.55;
+    .row-title { text-decoration: line-through; }
+  }
+
+  .row-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .row-time {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-caption);
+    color: var(--text-secondary);
+    font-weight: 600;
+    min-width: 78px;
+    white-space: nowrap;
+  }
+
+  .row-title {
+    flex: 1;
+    font-size: var(--font-size-sub);
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .weekday-name { font-size: 11px; }
-  .day-date { font-size: 13px; }
+  .week-list { padding: 0 12px; gap: 14px; }
+  .task-row .row-time { min-width: 70px; font-size: 11px; }
 }
 </style>

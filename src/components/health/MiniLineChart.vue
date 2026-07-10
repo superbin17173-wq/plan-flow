@@ -8,7 +8,9 @@ const props = withDefaults(defineProps<{
   color?: string
   showDots?: boolean
   yUnit?: string
-}>(), { width: 260, height: 80, color: '#81C9D8', showDots: true, yUnit: '' })
+}>(), { width: 260, height: 80, color: 'var(--ios-teal)', showDots: true, yUnit: '' })
+
+const gradId = computed(() => `grad-${Math.random().toString(36).slice(2, 9)}`)
 
 const chartData = computed(() => {
   if (props.data.length === 0) return null
@@ -44,12 +46,12 @@ const chartData = computed(() => {
   <div class="mini-chart">
     <svg v-if="chartData" :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`">
       <defs>
-        <linearGradient :id="`grad-${color.replace('#','')}`" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient :id="gradId" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" :stop-color="color" stop-opacity="0.3" />
           <stop offset="100%" :stop-color="color" stop-opacity="0" />
         </linearGradient>
       </defs>
-      <path :d="chartData.areaPath" :fill="`url(#grad-${color.replace('#','')})`" />
+      <path :d="chartData.areaPath" :fill="`url(#${gradId})`" />
       <path :d="chartData.path" :stroke="color" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round" />
       <g v-if="showDots">
         <circle
@@ -77,13 +79,14 @@ const chartData = computed(() => {
 }
 .empty {
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   text-align: center;
   padding: 20px 0;
 }
 .axis-txt {
   font-size: 10px;
   fill: var(--text-tertiary);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 </style>
+

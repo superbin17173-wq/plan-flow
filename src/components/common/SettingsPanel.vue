@@ -4,10 +4,11 @@ import { useSettingStore } from '../../stores/settingStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { sendPushPlus } from '../../utils/pushplus'
 import { useAIChat } from '../../composables/useAIChat'
-import { checkForUpdate, downloadAndUpdate, getUpdateIndexPath, type UpdateInfo } from '../../utils/otaUpdate'
+import { checkForUpdate, downloadUpdate, applyBundle, type UpdateInfo } from '../../utils/otaUpdate'
 import { mergeStudyTasks, getMergeableStudyTasks } from '../../utils/mergeStudy'
 import type { Task } from '../../types'
 import { Capacitor } from '@capacitor/core'
+import type { BundleInfo } from '@capgo/capacitor-updater'
 import StorageManager from './StorageManager.vue'
 import { APP_VERSION } from '../../utils/version'
 
@@ -69,6 +70,7 @@ const otaDownloading = ref(false)
 const otaProgress = ref(0)
 const otaError = ref('')
 const otaDone = ref(false)
+const otaBundle = ref<BundleInfo | null>(null)
 
 async function checkOtaUpdate() {
   if (!Capacitor.isNativePlatform()) {
@@ -79,6 +81,7 @@ async function checkOtaUpdate() {
   otaError.value = ''
   otaInfo.value = null
   otaDone.value = false
+  otaBundle.value = null
 
   const info = await checkForUpdate()
   otaChecking.value = false
@@ -90,17 +93,19 @@ async function checkOtaUpdate() {
 }
 
 async function doOtaUpdate() {
+  if (!otaInfo.value) return
   otaDownloading.value = true
   otaError.value = ''
   otaProgress.value = 0
 
-  const result = await downloadAndUpdate((p) => {
+  const result = await downloadUpdate(otaInfo.value.version, (p) => {
     otaProgress.value = p
   })
 
   otaDownloading.value = false
 
-  if (result.success) {
+  if (result.success && result.bundle) {
+    otaBundle.value = result.bundle
     otaDone.value = true
     otaError.value = ''
   } else {
@@ -109,11 +114,11 @@ async function doOtaUpdate() {
 }
 
 async function reloadNow() {
-  const indexPath = await getUpdateIndexPath()
-  if (indexPath) {
-    window.location.href = indexPath
-  } else {
-    window.location.reload()
+  if (!otaBundle.value) return
+  try {
+    await applyBundle(otaBundle.value)
+  } catch (err) {
+    otaError.value = err instanceof Error ? err.message : '应用失败'
   }
 }
 
@@ -502,11 +507,13 @@ async function onSleepEndBlur() {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格设置面板
+// iOS 设置面板
 .settings-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -514,15 +521,16 @@ async function onSleepEndBlur() {
 }
 
 .settings-panel {
-  background: #F2F2F7;
-  border-radius: 20px 20px 0 0;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xxl) var(--radius-xxl) 0 0;
   width: 100%;
-  max-width: 520px;
-  max-height: 85vh;
+  max-width: 540px;
+  max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom, 20px);
+  padding-bottom: var(--safe-bottom);
+  box-shadow: var(--shadow-xl);
 }
 
 .settings-header {
@@ -530,55 +538,66 @@ async function onSleepEndBlur() {
   align-items: center;
   justify-content: center;
   padding: 16px 20px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E5EA;
+  background: var(--bg-card);
+  border-bottom: 0.5px solid var(--separator);
   position: relative;
 
   h2 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1A1A1A;
+    font-size: var(--font-size-headline);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
     margin: 0;
   }
 }
 
 .close-btn {
   position: absolute;
-  right: 16px;
-  width: 32px;
-  height: 32px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: transparent;
-  color: #8E8E93;
-  font-size: 20px;
+  background: var(--bg-fill-quaternary);
+  color: var(--text-secondary);
+  font-size: 18px;
   line-height: 1;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+
+  &:hover { background: var(--bg-pressed); }
 }
 
 .settings-body {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
-  background: #F2F2F7;
+  background: var(--bg-primary);
 }
 
 .settings-section {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 
   h3 {
-    font-size: 15px;
+    font-size: var(--font-size-footnote);
     font-weight: 600;
-    color: #1A1A1A;
+    color: var(--text-tertiary);
     margin: 0 0 8px 0;
-    padding-left: 16px;
+    padding: 0 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
   }
-}
 
-// iOS 风格卡片组
-.settings-section {
   h3 + * {
-    background: #FFFFFF;
-    border-radius: 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
     overflow: hidden;
+    box-shadow: var(--shadow-xs);
   }
 }
 
@@ -586,19 +605,25 @@ async function onSleepEndBlur() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 16px;
+  min-height: 44px;
   cursor: pointer;
-  background: #FFFFFF;
+  background: var(--bg-card);
+  transition: background var(--transition-fast);
+
+  & + .row, & + .field, & + .sleep-time-grid { border-top: 0.5px solid var(--separator); }
+
+  &:hover { background: var(--bg-hover); }
 
   span {
-    color: #1A1A1A;
-    font-size: 16px;
+    color: var(--text-primary);
+    font-size: var(--font-size-body);
   }
 
   input[type='checkbox'] {
     width: 22px;
     height: 22px;
-    accent-color: #007AFF;
+    accent-color: var(--ios-blue);
   }
 }
 
@@ -606,133 +631,122 @@ async function onSleepEndBlur() {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 12px 0;
+  margin: 0;
   padding: 12px 16px;
-  background: #FFFFFF;
+  background: var(--bg-card);
+
+  & + .field, & + .row { border-top: 0.5px solid var(--separator); }
 
   span {
-    font-size: 14px;
-    color: #8E8E93;
+    font-size: var(--font-size-footnote);
+    color: var(--text-tertiary);
+    font-weight: 500;
   }
 
   input, select {
-    padding: 12px 14px;
+    padding: 11px 14px;
     border: none;
-    border-radius: 10px;
-    background: #F2F2F7;
-    color: #1A1A1A;
-    font-size: 16px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-fill-quaternary);
+    color: var(--text-primary);
+    font-size: var(--font-size-body);
     font-family: inherit;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
 
     &:focus {
       outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+      background: var(--bg-primary);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18);
     }
   }
 }
 
 .hint {
-  font-size: 13px;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  color: var(--text-tertiary);
   margin: 8px 0;
-  padding-left: 16px;
+  padding: 0 16px;
+  line-height: 1.5;
 }
 
 .version-badge {
-  font-size: 12px;
-  background: #E5E5EA;
-  padding: 4px 10px;
-  border-radius: 6px;
-  color: #8E8E93;
+  font-size: var(--font-size-caption);
+  background: var(--bg-fill-quaternary);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
   margin-left: 8px;
+  font-weight: 500;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
   flex-wrap: wrap;
 }
 
 .btn {
-  padding: 12px 20px;
-  border-radius: 10px;
-  background: #007AFF;
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-  transition: opacity 0.2s;
+  padding: 10px 18px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--ios-blue);
+  color: #fff;
+  font-size: var(--font-size-sub);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--spring), opacity var(--transition-fast);
 
-  &:active:not(:disabled) {
-    opacity: 0.8;
-  }
+  &:active:not(:disabled) { transform: scale(0.97); opacity: 0.9; }
 
   &:disabled {
-    background: #E5E5EA;
-    color: #8E8E93;
+    background: var(--bg-fill-quaternary);
+    color: var(--text-tertiary);
     cursor: not-allowed;
   }
 
-  &.danger-btn {
-    background: #FF3B30;
-  }
+  &.danger-btn { background: var(--ios-red); }
 }
 
 .ai-usage {
-  font-size: 13px;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  color: var(--text-tertiary);
 }
 
 .test-result {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
 
-  &.ok {
-    color: #22c55e;
-  }
-  &.err {
-    color: #ef4444;
-  }
+  &.ok { color: var(--ios-green); }
+  &.err { color: var(--ios-red); }
 }
 
 .notice {
-  margin-top: 16px;
+  margin-top: 12px;
   padding: 12px;
-  background: var(--bg-primary);
-  border-radius: 8px;
-  font-size: 12px;
+  background: var(--bg-fill-quaternary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
   line-height: 1.6;
 
-  ol {
-    margin: 4px 0 8px 20px;
-    padding: 0;
-  }
-
-  a {
-    color: var(--color-work);
-    text-decoration: underline;
-  }
-
+  ol { margin: 4px 0 8px 20px; padding: 0; }
+  a { color: var(--ios-blue); text-decoration: underline; }
   .warn {
     margin-top: 8px;
     color: var(--text-tertiary);
-    font-size: 11px;
+    font-size: var(--font-size-caption2);
   }
 }
 
-.settings-fade-enter-active,
-.settings-fade-leave-active {
-  transition: opacity 0.2s;
-}
-.settings-fade-enter-from,
-.settings-fade-leave-to {
-  opacity: 0;
-}
+.settings-fade-enter-active, .settings-fade-leave-active { transition: opacity 0.2s; }
+.settings-fade-enter-from, .settings-fade-leave-to { opacity: 0; }
 
 .ota-status {
   margin: 8px 0;
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   color: var(--text-secondary);
 }
 
@@ -740,7 +754,7 @@ async function onSleepEndBlur() {
   display: flex;
   gap: 12px;
   padding: 12px 16px;
-  background: #FFFFFF;
+  background: var(--bg-card);
 }
 
 .field-inline {
@@ -750,34 +764,28 @@ async function onSleepEndBlur() {
   gap: 6px;
 
   span {
-    font-size: 13px;
-    color: var(--text-secondary);
+    font-size: var(--font-size-footnote);
+    color: var(--text-tertiary);
   }
 
   input[type="time"] {
     padding: 10px 12px;
     border: none;
-    border-radius: 8px;
-    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    background: var(--bg-fill-quaternary);
     color: var(--text-primary);
-    font-size: 15px;
+    font-size: var(--font-size-sub);
     font-family: inherit;
 
     &:focus {
       outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18);
     }
   }
 }
 
-.ota-success {
-  color: #34C759;
-  font-weight: 500;
-}
-
-.primary-btn {
-  background: #34C759 !important;
-}
+.ota-success { color: var(--ios-green); font-weight: 600; }
+.primary-btn { background: var(--ios-green) !important; }
 
 .ota-progress {
   display: flex;
@@ -787,20 +795,20 @@ async function onSleepEndBlur() {
 
   .progress-bar {
     height: 6px;
-    width: 100px;
-    background: var(--bg-primary);
+    width: 120px;
+    background: var(--bg-fill-quaternary);
     border-radius: 3px;
     overflow: hidden;
 
     .progress-fill {
       height: 100%;
-      background: var(--color-work);
+      background: var(--ios-blue);
       transition: width 0.2s;
     }
   }
 
   span {
-    font-size: 12px;
+    font-size: var(--font-size-caption);
     color: var(--text-tertiary);
   }
 }
@@ -812,7 +820,7 @@ async function onSleepEndBlur() {
   margin-bottom: 12px;
 
   label {
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     color: var(--text-secondary);
     min-width: 120px;
   }
@@ -821,50 +829,30 @@ async function onSleepEndBlur() {
 .merge-select {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-sm);
+  background: var(--bg-fill-quaternary);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-sub);
 }
 
 .merge-result {
   padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
   margin-bottom: 10px;
-
-  &[style*="✅"] {
-    background: rgba(80, 180, 100, 0.1);
-    color: rgb(60, 150, 80);
-  }
-
-  &[style*="❌"] {
-    background: rgba(240, 100, 100, 0.1);
-    color: rgb(200, 70, 70);
-  }
 }
 
 @media (max-width: 768px) {
-  .settings-overlay {
-    padding: 0;
-    align-items: flex-end;
-  }
-
   .settings-panel {
-    max-width: 100%;
     max-height: 92vh;
-    border-radius: 16px 16px 0 0;
-    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
+  .close-btn { width: 32px; height: 32px; }
+}
 
-  .settings-body {
-    padding: 16px;
-  }
-
-  .close-btn {
-    width: 40px;
-    height: 40px;
-  }
+@media (min-width: 769px) {
+  .settings-mask { align-items: center; padding: 16px; }
+  .settings-panel { border-radius: var(--radius-xl); }
 }
 </style>

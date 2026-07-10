@@ -1,0 +1,107 @@
+- generic [ref=e28]:
+  - banner [ref=e29]:
+    - generic [ref=e30]:
+      - heading "PlanFlow" [level=1] [ref=e31]
+      - generic [ref=e32]:
+        - button "上一页" [ref=e33] [cursor=pointer]: ‹
+        - button "今天" [ref=e34] [cursor=pointer]
+        - button "下一页" [ref=e35] [cursor=pointer]: ›
+      - generic [ref=e36]: 2026年07月
+    - generic [ref=e38]:
+      - button "年" [ref=e39] [cursor=pointer]
+      - button "月" [ref=e40] [cursor=pointer]
+      - button "周" [ref=e41] [cursor=pointer]
+      - button "日" [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - button "+" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: +
+      - button "🔍" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 🔍
+      - button "📥" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 📥
+      - button "📊" [active] [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 📊
+      - button "⚙️" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: ⚙️
+      - button "☀️" [ref=e54] [cursor=pointer]:
+        - generic [ref=e55]: ☀️
+    - generic [ref=e172]:
+      - generic [ref=e173]:
+        - heading "统计" [level=3] [ref=e174]
+        - button "×" [ref=e175] [cursor=pointer]
+      - generic [ref=e176]:
+        - generic [ref=e177]:
+          - generic [ref=e178]:
+            - generic [ref=e179]: 🔥 今日能量
+            - generic [ref=e180]:
+              - button "⚙️ 资料" [ref=e181] [cursor=pointer]
+              - button "🍽 记录饮食" [ref=e182] [cursor=pointer]
+          - generic [ref=e183]: 请先在 ⚙️资料 里填写身高/体重/年龄/性别以启用 BMR 计算
+        - generic [ref=e184]:
+          - generic [ref=e185]: 今日完成率
+          - generic [ref=e187]: 0 / 0
+        - generic [ref=e188]:
+          - generic [ref=e189]: 本周完成率
+          - generic [ref=e191]: 0 / 0
+        - generic [ref=e192]:
+          - generic [ref=e193]: 本月完成率
+          - generic [ref=e195]: 0 / 0
+        - generic [ref=e196]: 💪 健身数据
+        - generic [ref=e197]:
+          - generic [ref=e198]: 体重趋势(近 30 天)
+          - generic [ref=e200]: 暂无数据
+        - generic [ref=e201]:
+          - generic [ref=e202]:
+            - text: 训练容量(近 30 天)
+            - generic [ref=e203]: 本周 0 次
+          - generic [ref=e205]: 暂无数据
+        - generic [ref=e206]:
+          - generic [ref=e207]: 每日热量(近 14 天)
+          - generic [ref=e209]: 暂无数据
+        - generic [ref=e210]: 📚 任务分类
+  - main [ref=e56]:
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e59]: 周一
+        - generic [ref=e60]: 周二
+        - generic [ref=e61]: 周三
+        - generic [ref=e62]: 周四
+        - generic [ref=e63]: 周五
+        - generic [ref=e64]: 周六
+        - generic [ref=e65]: 周日
+      - generic [ref=e66]:
+        - generic [ref=e69] [cursor=pointer]: "29"
+        - generic [ref=e72] [cursor=pointer]: "30"
+        - generic [ref=e75] [cursor=pointer]: "1"
+        - generic [ref=e78] [cursor=pointer]: "2"
+        - generic [ref=e81] [cursor=pointer]: "3"
+        - generic [ref=e84] [cursor=pointer]: "4"
+        - generic [ref=e87] [cursor=pointer]: "5"
+        - generic [ref=e90] [cursor=pointer]: "6"
+        - generic [ref=e93] [cursor=pointer]: "7"
+        - generic [ref=e96] [cursor=pointer]: "8"
+        - generic [ref=e99] [cursor=pointer]: "9"
+        - generic [ref=e102] [cursor=pointer]: "10"
+        - generic [ref=e105] [cursor=pointer]: "11"
+        - generic [ref=e108] [cursor=pointer]: "12"
+        - generic [ref=e111] [cursor=pointer]: "13"
+        - generic [ref=e114] [cursor=pointer]: "14"
+        - generic [ref=e117] [cursor=pointer]: "15"
+        - generic [ref=e120] [cursor=pointer]: "16"
+        - generic [ref=e123] [cursor=pointer]: "17"
+        - generic [ref=e126] [cursor=pointer]: "18"
+        - generic [ref=e129] [cursor=pointer]: "19"
+        - generic [ref=e132] [cursor=pointer]: "20"
+        - generic [ref=e135] [cursor=pointer]: "21"
+        - generic [ref=e138] [cursor=pointer]: "22"
+        - generic [ref=e141] [cursor=pointer]: "23"
+        - generic [ref=e144] [cursor=pointer]: "24"
+        - generic [ref=e147] [cursor=pointer]: "25"
+        - generic [ref=e150] [cursor=pointer]: "26"
+        - generic [ref=e153] [cursor=pointer]: "27"
+        - generic [ref=e156] [cursor=pointer]: "28"
+        - generic [ref=e159] [cursor=pointer]: "29"
+        - generic [ref=e162] [cursor=pointer]: "30"
+        - generic [ref=e165] [cursor=pointer]: "31"
+        - generic [ref=e168] [cursor=pointer]: "2"
+        - generic [ref=e171] [cursor=pointer]: "3"

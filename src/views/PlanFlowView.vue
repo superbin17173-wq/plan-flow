@@ -105,19 +105,20 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
 </template>
 
 <style lang="scss" scoped>
-// iOS 风格 PlanFlow 主视图
+// iOS PlanFlow 主视图
 .planflow-view {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #F2F2F7;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .main-content {
   flex: 1;
   padding: 16px;
   overflow: hidden;
-  background: #F2F2F7;
+  background: var(--bg-primary);
 }
 
 .loading-state {
@@ -127,71 +128,77 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
   justify-content: center;
   height: 100%;
   gap: 16px;
-  color: #8E8E93;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sub);
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #E5E5EA;
-  border-top-color: #007AFF;
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--separator);
+  border-top-color: var(--ios-blue);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.85s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {
-  .main-content {
-    padding: 12px;
-  }
+  .main-content { padding: 12px; }
 }
 
-// iOS 风格提醒 Toast
+// iOS 通知式 Toast
 .reminder-toast {
   position: fixed;
-  top: 80px;
+  top: calc(80px + var(--safe-top));
   right: 20px;
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 16px;
+  background: var(--material-thick);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 2000;
   cursor: pointer;
-  max-width: 320px;
+  max-width: 340px;
+  color: var(--text-primary);
+  border: 0.5px solid var(--separator);
 
-  .toast-icon {
-    font-size: 28px;
-  }
-
-  .toast-content {
-    flex: 1;
-  }
-
+  .toast-icon { font-size: 26px; }
+  .toast-content { flex: 1; min-width: 0; }
   .toast-title {
-    font-size: 16px;
+    font-size: var(--font-size-callout);
     font-weight: 600;
-    color: #1A1A1A;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
-
   .toast-time {
-    font-size: 14px;
-    color: #8E8E93;
-    margin-top: 4px;
+    font-size: var(--font-size-sub);
+    color: var(--text-tertiary);
+    margin-top: 3px;
+  }
+  .toast-close {
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 22px;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
   }
 }
 
 .toast-enter-active, .toast-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .toast-enter-from {
   opacity: 0;
-  transform: translateX(100px);
+  transform: translateY(-24px);
 }
 .toast-leave-to {
   opacity: 0;
@@ -200,11 +207,11 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
 
 @media (max-width: 768px) {
   .reminder-toast {
-    left: 16px;
-    right: 16px;
-    top: 70px;
+    left: 12px;
+    right: 12px;
+    top: calc(72px + var(--safe-top));
     max-width: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
   }
 }
 </style>

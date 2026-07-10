@@ -1,0 +1,79 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - heading "PlanFlow" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - button "上一页" [ref=e9] [cursor=pointer]: ‹
+        - button "今天" [ref=e10] [cursor=pointer]
+        - button "下一页" [ref=e11] [cursor=pointer]: ›
+      - generic [ref=e12]: 07月05日 - 07月11日
+    - generic [ref=e14]:
+      - button "年" [ref=e15] [cursor=pointer]
+      - button "月" [ref=e16] [cursor=pointer]
+      - button "周" [active] [ref=e17] [cursor=pointer]
+      - button "日" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - button "+" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: +
+      - button "🔍" [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: 🔍
+      - button "📥" [ref=e24] [cursor=pointer]:
+        - generic [ref=e25]: 📥
+      - button "📊" [ref=e26] [cursor=pointer]:
+        - generic [ref=e27]: 📊
+      - button "⚙️" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: ⚙️
+      - button "☀️" [ref=e30] [cursor=pointer]:
+        - generic [ref=e31]: ☀️
+  - main [ref=e32]:
+    - generic [ref=e208]:
+      - button "周一 06 无计划 ›" [ref=e210] [cursor=pointer]:
+        - generic [ref=e211]:
+          - generic [ref=e212]: 周一
+          - generic [ref=e213]: "06"
+        - generic [ref=e214]:
+          - generic [ref=e215]: 无计划
+          - generic [ref=e216]: ›
+      - button "周二 07 无计划 ›" [ref=e218] [cursor=pointer]:
+        - generic [ref=e219]:
+          - generic [ref=e220]: 周二
+          - generic [ref=e221]: "07"
+        - generic [ref=e222]:
+          - generic [ref=e223]: 无计划
+          - generic [ref=e224]: ›
+      - button "周三 08 无计划 ›" [ref=e226] [cursor=pointer]:
+        - generic [ref=e227]:
+          - generic [ref=e228]: 周三
+          - generic [ref=e229]: "08"
+        - generic [ref=e230]:
+          - generic [ref=e231]: 无计划
+          - generic [ref=e232]: ›
+      - button "周四 09 无计划 ›" [ref=e234] [cursor=pointer]:
+        - generic [ref=e235]:
+          - generic [ref=e236]: 周四
+          - generic [ref=e237]: "09"
+        - generic [ref=e238]:
+          - generic [ref=e239]: 无计划
+          - generic [ref=e240]: ›
+      - button "周五 10 今天 无计划 ›" [ref=e242] [cursor=pointer]:
+        - generic [ref=e243]:
+          - generic [ref=e244]: 周五
+          - generic [ref=e245]: "10"
+          - generic [ref=e246]: 今天
+        - generic [ref=e247]:
+          - generic [ref=e248]: 无计划
+          - generic [ref=e249]: ›
+      - button "周六 11 无计划 ›" [ref=e251] [cursor=pointer]:
+        - generic [ref=e252]:
+          - generic [ref=e253]: 周六
+          - generic [ref=e254]: "11"
+        - generic [ref=e255]:
+          - generic [ref=e256]: 无计划
+          - generic [ref=e257]: ›
+      - button "周日 12 无计划 ›" [ref=e259] [cursor=pointer]:
+        - generic [ref=e260]:
+          - generic [ref=e261]: 周日
+          - generic [ref=e262]: "12"
+        - generic [ref=e263]:
+          - generic [ref=e264]: 无计划
+          - generic [ref=e265]: ›

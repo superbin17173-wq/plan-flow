@@ -155,7 +155,9 @@ function clearFilters() {
 .search-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 1000;
 }
 
@@ -164,58 +166,65 @@ function clearFilters() {
   top: 0;
   left: 0;
   right: 0;
-  max-width: 600px;
+  max-width: 640px;
   margin: 0 auto;
-  background: var(--bg-secondary);
-  border-radius: 0 0 16px 16px;
+  background: var(--bg-elevated);
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
 }
 
 .search-header {
   display: flex;
   align-items: center;
-  padding: 16px;
-  background: var(--calendar-header-bg);
+  padding: 14px 16px;
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  border-bottom: 0.5px solid var(--separator);
+  gap: 10px;
 }
 
 .search-input {
   flex: 1;
-  padding: 12px 16px;
-  border: none;
-  background: var(--bg-primary);
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 10px 14px;
+  border: 0.5px solid transparent;
+  background: var(--bg-fill-quaternary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  color: var(--text-primary);
 
+  &::placeholder { color: var(--text-tertiary); }
   &:focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-work);
+    background: var(--bg-card);
+    border-color: var(--ios-blue);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
   }
 }
 
 .close-btn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-fill-quaternary);
   color: var(--text-secondary);
-  font-size: 20px;
-  margin-left: 12px;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  &:hover { background: var(--bg-pressed); }
 }
 
 .search-filters {
   display: flex;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-bottom: 0.5px solid var(--separator);
   align-items: center;
+  background: var(--bg-card);
 }
 
 .filter-group {
@@ -224,119 +233,116 @@ function clearFilters() {
   gap: 6px;
 
   label {
-    font-size: 12px;
+    font-size: var(--font-size-caption);
     color: var(--text-tertiary);
+    font-weight: 500;
   }
 }
 
 .filter-select {
   padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-sm);
+  background: var(--bg-fill-quaternary);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
 }
 
 .clear-btn {
   padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-tertiary);
-  font-size: 12px;
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  border-radius: var(--radius-full);
+  background: var(--bg-fill-quaternary);
+  color: var(--ios-blue);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
 }
 
 .search-results {
-  max-height: 400px;
+  max-height: 440px;
   overflow-y: auto;
-  padding: 16px;
+  padding: 12px 12px 16px;
+  background: var(--bg-card);
 }
 
 .no-results {
   text-align: center;
   color: var(--text-tertiary);
-  padding: 32px;
+  padding: 40px 16px;
+  font-size: var(--font-size-sub);
 }
 
-.result-group {
-  margin-bottom: 16px;
-}
+.result-group { margin-bottom: 16px; }
 
 .group-date {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   color: var(--text-tertiary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  padding-left: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .result-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition-fast);
 
-  &:hover {
-    background: var(--bg-hover);
-  }
+  &:hover { background: var(--bg-hover); }
 }
 
 .task-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .task-title {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--font-size-sub);
   color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &.completed {
     text-decoration: line-through;
-    opacity: 0.6;
+    opacity: 0.55;
   }
 }
 
 .task-time {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   color: var(--text-tertiary);
+  font-family: var(--font-mono);
 }
 
-// 动画
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.24s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .slide-down-enter-active, .slide-down-leave-active {
-  transition: transform 0.3s;
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.slide-down-enter-from, .slide-down-leave-to {
-  transform: translateY(-100%);
-}
+.slide-down-enter-from, .slide-down-leave-to { transform: translateY(-100%); }
 
 @media (min-width: 769px) {
-  .search-overlay {
-    background: transparent;
-    pointer-events: none;
-  }
-
+  .search-overlay { background: rgba(0,0,0,0.25); }
   .search-panel {
     position: fixed;
     top: 70px;
     left: 50%;
     transform: translateX(-50%);
-    width: 500px;
-    border-radius: 16px;
-    pointer-events: auto;
+    width: 540px;
+    border-radius: var(--radius-xl);
   }
 }
 
@@ -346,37 +352,23 @@ function clearFilters() {
     gap: 8px;
     padding: 10px 12px;
   }
-
   .filter-group {
     flex: 1 1 auto;
     min-width: 0;
-
     label { display: none; }
   }
-
   .filter-select {
     width: 100%;
     padding: 8px 10px;
-    font-size: 14px;
+    font-size: var(--font-size-sub);
   }
-
   .clear-btn {
     flex-shrink: 0;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
   }
-
-  .search-input {
-    font-size: 16px; // avoid iOS zoom-on-focus
-  }
-
-  .close-btn {
-    width: 40px;
-    height: 40px;
-  }
-
-  .search-results {
-    max-height: calc(100vh - 200px);
-  }
+  .search-input { font-size: 16px; }
+  .close-btn { width: 34px; height: 34px; }
+  .search-results { max-height: calc(100vh - 200px); }
 }
 </style>

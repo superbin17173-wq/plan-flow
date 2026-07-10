@@ -159,14 +159,15 @@ function categoryColor(id: string): string {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格年周视图
+// iOS 年周视图
 .year-week-view {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
 .yw-header {
@@ -177,46 +178,52 @@ function categoryColor(id: string): string {
   flex-wrap: wrap;
 }
 
-.nav-buttons { display: flex; gap: 8px; }
+.nav-buttons { display: flex; gap: 6px; }
 .nav-btn {
   width: 36px;
   height: 36px;
   border-radius: 10px;
   background: transparent;
-  color: #007AFF;
+  color: var(--ios-blue);
   font-size: 17px;
-  &:active { opacity: 0.6; }
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--spring);
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.9); background: var(--bg-pressed); }
   &.today-btn {
     width: auto;
     padding: 8px 18px;
     border-radius: 10px;
-    background: #007AFF;
-    color: white;
-    font-size: 15px;
-    font-weight: 500;
+    background: var(--ios-blue);
+    color: #fff;
+    font-size: var(--font-size-sub);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.28);
   }
 }
 
 .yw-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font-size: var(--font-size-headline);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .legend {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  color: var(--text-tertiary);
 }
 .legend-dot {
   width: 10px;
   height: 10px;
   border-radius: 3px;
   margin-left: 8px;
-  &.current { background: #007AFF; }
-  &.past { background: #C7C7CC; }
+  &.current { background: var(--ios-blue); }
+  &.past { background: var(--text-quaternary); }
 }
 
 .months-container {
@@ -234,9 +241,9 @@ function categoryColor(id: string): string {
 .month-label {
   width: 42px;
   flex-shrink: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font-size: var(--font-size-sub);
+  font-weight: 700;
+  color: var(--text-primary);
   padding-top: 6px;
   text-align: right;
 }
@@ -249,8 +256,8 @@ function categoryColor(id: string): string {
 }
 
 .week-cell {
-  background: #F2F2F7;
-  border-radius: 12px;
+  background: var(--bg-fill-quaternary);
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   text-align: left;
   min-height: 76px;
@@ -258,22 +265,14 @@ function categoryColor(id: string): string {
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
+  transition: background var(--transition-fast), transform var(--spring);
+  border: none;
 
-  &:active {
-    background: #E5E5EA;
-  }
-
-  &.current {
-    background: rgba(0, 122, 255, 0.1);
-  }
-
-  &.past {
-    opacity: 0.6;
-  }
-
-  &.empty {
-    opacity: 0.75;
-  }
+  &:active { transform: scale(0.98); background: var(--bg-hover); }
+  &.current { background: rgba(0, 122, 255, 0.10); }
+  .dark &.current { background: rgba(10, 132, 255, 0.20); }
+  &.past { opacity: 0.6; }
+  &.empty { opacity: 0.75; }
 }
 
 .wc-top {
@@ -283,24 +282,24 @@ function categoryColor(id: string): string {
 }
 
 .wc-num {
-  font-size: 13px;
-  font-weight: 600;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  font-weight: 700;
+  color: var(--text-tertiary);
 }
 
 .wc-count {
-  background: #007AFF;
-  color: white;
+  background: var(--ios-blue);
+  color: #fff;
   padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
 }
 
 .wc-range {
-  font-size: 11px;
-  color: #C7C7CC;
-  font-family: monospace;
+  font-size: var(--font-size-caption2);
+  color: var(--text-quaternary);
+  font-family: var(--font-mono);
 }
 
 .wc-dots {
@@ -315,17 +314,19 @@ function categoryColor(id: string): string {
 
 .wc-progress {
   height: 3px;
-  background: #E5E5EA;
+  background: var(--separator);
   border-radius: 3px;
   overflow: hidden;
   margin-top: auto;
 }
 .wc-progress-bar {
   height: 100%;
-  background: #34C759;
+  background: var(--ios-green);
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 640px) {
+  .year-week-view { padding: 14px; }
   .month-group { flex-direction: column; align-items: stretch; gap: 6px; }
   .month-label { width: auto; text-align: left; padding-top: 0; }
   .weeks-row { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }

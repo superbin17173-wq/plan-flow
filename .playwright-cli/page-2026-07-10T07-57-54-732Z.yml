@@ -1,0 +1,24 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - heading "我的项目" [level=1] [ref=e6]
+    - paragraph [ref=e7]: SuperBin's Workspace · 选择一个项目开始
+  - main [ref=e8]:
+    - button "📅 PlanFlow 可用 日历化任务管理 · 提醒 · 健康记录 · AI 助手 日历 任务 PWA Android 点击进入 →" [ref=e9] [cursor=pointer]:
+      - generic [ref=e10]: 📅
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: PlanFlow
+          - generic [ref=e14]: 可用
+        - paragraph [ref=e15]: 日历化任务管理 · 提醒 · 健康记录 · AI 助手
+        - generic [ref=e16]:
+          - generic [ref=e17]: 日历
+          - generic [ref=e18]: 任务
+          - generic [ref=e19]: PWA
+          - generic [ref=e20]: Android
+        - generic [ref=e21]: 点击进入 →
+    - generic [ref=e22]:
+      - generic [ref=e23]: ✨
+      - generic [ref=e24]:
+        - generic [ref=e25]: 更多项目
+        - paragraph [ref=e26]: 敬请期待
+  - contentinfo [ref=e27]: © 2026 SuperBin

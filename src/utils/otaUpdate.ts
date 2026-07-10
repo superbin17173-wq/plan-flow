@@ -1,9 +1,7 @@
 // OTA 远程更新模块
-// 原理：APP启动时检查服务器 version.json，有新版本则下载 dist.zip 到本地并热更新
+// 原理: 用 @capgo/capacitor-updater 插件做原生 WebView 切换,取代之前手写的 file:// 导航(会被跨源拦)
 
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem'
-import JSZip from 'jszip'
-import { Preferences } from '@capacitor/preferences'
+import { CapacitorUpdater, type BundleInfo } from '@capgo/capacitor-updater'
 import { Capacitor } from '@capacitor/core'
 import { APP_VERSION } from './version'
 
@@ -11,7 +9,6 @@ import { APP_VERSION } from './version'
 const UPDATE_SERVER = 'https://planflow-aot.pages.dev'
 const VERSION_PATH = '/version.json'
 const DIST_ZIP_PATH = '/dist.zip'
-const LOCAL_DIR = 'planflow-updates'
 
 export interface UpdateInfo {
   version: string
@@ -20,19 +17,19 @@ export interface UpdateInfo {
   localVersion: string
 }
 
-// 检查是否有更新（使用打包时的版本号 APP_VERSION）
+// 检查是否有更新
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
-    const res = await fetch(`${UPDATE_SERVER}${VERSION_PATH}`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) return { version: '', buildTime: '', hasUpdate: false, localVersion: APP_VERSION }
+    const res = await fetch(`${UPDATE_SERVER}${VERSION_PATH}`, { cache: 'no-store' })
+    if (!res.ok) {
+      return { version: '', buildTime: '', hasUpdate: false, localVersion: APP_VERSION }
+    }
 
     const remote = await res.json()
     const remoteVersion = remote.version || '0.0.0'
 
-    // 比较远程版本和打包时的版本号
-    const hasUpdate = remoteVersion !== APP_VERSION
+    // 只有 native 平台才走 OTA(浏览器/dev 环境不弹更新框)
+    const hasUpdate = Capacitor.isNativePlatform() && remoteVersion !== APP_VERSION
 
     return {
       version: remoteVersion,
@@ -45,178 +42,92 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
   }
 }
 
-// 下载并安装更新
-export async function downloadAndUpdate(
+// 下载新版本 bundle,返回 BundleInfo(含 id,后续 apply 用)
+// onProgress: 0-100
+export async function downloadUpdate(
+  version: string,
   onProgress?: (percent: number) => void
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; bundle?: BundleInfo; error?: string }> {
+  if (!Capacitor.isNativePlatform()) {
+    return { success: false, error: '非移动端不支持 OTA' }
+  }
+
+  const listener = await CapacitorUpdater.addListener('download', (evt) => {
+    onProgress?.(evt.percent)
+  })
+
   try {
-    // 下载 zip（添加超时和错误处理）
-    console.log('OTA: 开始下载', `${UPDATE_SERVER}${DIST_ZIP_PATH}`)
-
-    const res = await fetch(`${UPDATE_SERVER}${DIST_ZIP_PATH}`, {
-      mode: 'cors',
-      cache: 'no-store',
+    const bundle = await CapacitorUpdater.download({
+      url: `${UPDATE_SERVER}${DIST_ZIP_PATH}`,
+      version,
     })
-
-    console.log('OTA: 响应状态', res.status)
-
-    if (!res.ok) {
-      console.error('OTA: 下载失败，HTTP', res.status)
-      return { success: false, error: `下载失败: HTTP ${res.status}` }
-    }
-
-    const total = Number(res.headers.get('content-length')) || 0
-    if (total === 0) {
-      console.log('OTA: content-length 未知，直接下载完整文件')
-    }
-
-    // Android WebView 可能不支持 ReadableStream，直接用 arrayBuffer
-    console.log('OTA: 开始读取响应体...')
-    let arrayBuffer: ArrayBuffer
-    try {
-      arrayBuffer = await res.arrayBuffer()
-    } catch (streamErr) {
-      console.error('OTA: arrayBuffer 读取失败，尝试 blob 方式', streamErr)
-      // fallback: blob -> arrayBuffer
-      try {
-        const blob = await res.blob()
-        arrayBuffer = await blob.arrayBuffer()
-      } catch (blobErr) {
-        console.error('OTA: blob 方式也失败', blobErr)
-        return { success: false, error: '下载失败: 无法读取响应数据' }
-      }
-    }
-
-    const zipBuffer = new Uint8Array(arrayBuffer)
-    console.log('OTA: 下载完成，大小', zipBuffer.length, '字节')
-    onProgress?.(30)
-
-    // 解压
-    console.log('OTA: 开始解压...')
-    let zip: JSZip
-    try {
-      zip = await JSZip.loadAsync(zipBuffer)
-    } catch (zipErr) {
-      console.error('OTA: ZIP 解压失败', zipErr)
-      return { success: false, error: '更新包解压失败，请重试' }
-    }
-    const files = Object.keys(zip.files)
-    console.log('OTA: ZIP 包含', files.length, '个文件')
-
-    // 先清理旧目录
-    try {
-      await Filesystem.rmdir({ path: LOCAL_DIR, directory: Directory.Data, recursive: true })
-    } catch {
-      // 目录不存在，忽略
-    }
-
-    onProgress?.(50)
-
-    // 解压每个文件
-    let fileIndex = 0
-    for (const filePath of files) {
-      const file = zip.files[filePath]
-      if (file.dir) continue
-      fileIndex++
-
-      // 将 Windows 反斜杠转为正斜杠
-      const normalizedPath = filePath.replace(/\\/g, '/')
-
-      // 判断是否是文本文件（JS、CSS、HTML、JSON、SVG 等）
-      const isTextFile = /\.(js|css|html|json|svg|txt|md|map)$/i.test(normalizedPath)
-
-      // 使用合适的方式读取文件内容
-      const content = isTextFile
-        ? await file.async('string')
-        : await file.async('base64')
-
-      // 确保父目录存在
-      const parts = normalizedPath.split('/')
-      if (parts.length > 1) {
-        let currentPath = LOCAL_DIR
-        for (let i = 0; i < parts.length - 1; i++) {
-          currentPath = `${currentPath}/${parts[i]}`
-          try {
-            await Filesystem.mkdir({ path: currentPath, directory: Directory.Data, recursive: true })
-          } catch {
-            // 已存在
-          }
-        }
-      }
-
-      try {
-        await Filesystem.writeFile({
-          path: `${LOCAL_DIR}/${normalizedPath}`,
-          data: content,
-          directory: Directory.Data,
-          recursive: true,
-          encoding: isTextFile ? Encoding.UTF8 : undefined,
-        })
-      } catch (writeErr) {
-        console.error('OTA: 写入文件失败', normalizedPath, writeErr)
-        return { success: false, error: `写入文件失败: ${normalizedPath}` }
-      }
-
-      // 更新进度 (50-90%)
-      onProgress?.(50 + Math.round((fileIndex / files.length) * 40))
-    }
-
-    console.log('OTA: 文件写入完成')
-
     onProgress?.(100)
-    return { success: true }
+    return { success: true, bundle }
   } catch (err) {
-    console.error('OTA更新失败:', err)
     const msg = err instanceof Error ? err.message : String(err)
-    return { success: false, error: msg || '未知错误' }
+    return { success: false, error: msg || '下载失败' }
+  } finally {
+    listener.remove()
   }
 }
 
-// 获取更新后的 index.html URI（用于加载）
-export async function getUpdateIndexPath(): Promise<string | null> {
-  try {
-    const result = await Filesystem.getUri({
-      path: `${LOCAL_DIR}/index.html`,
-      directory: Directory.Data,
-    })
-    return result.uri
-  } catch {
-    return null
+// 立即应用新 bundle: 切换 WebView 并重启 JS 上下文
+// 注意: 调用后当前 JS 会被销毁,不要在后面写其他逻辑
+// 返回: 诊断信息(仅在 set 未触发 reload 时才会返回,正常情况下 JS 上下文被销毁不会返回)
+export async function applyBundle(bundle: BundleInfo): Promise<{ diagnosticsAfterSet: string }> {
+  // set 之前先列所有 bundle,确认目标 bundle 在 native 侧存在且状态正常
+  const before = await CapacitorUpdater.list().catch((e) => ({ bundles: [], _error: String(e) }))
+  const target = (before.bundles || []).find((b: any) => b.id === bundle.id) as any
+
+  if (!target) {
+    throw new Error(`Bundle ${bundle.id} 在 native 侧不存在。当前 list=${JSON.stringify(before)}`)
+  }
+  // capgo 的 status 可能包含 'error' / 'deleted' / 其他异常值
+  if (target.status === 'error' || target.status === 'deleted') {
+    throw new Error(`Bundle ${bundle.id} 状态异常: ${target.status}。完整信息=${JSON.stringify(target)}`)
+  }
+
+  await CapacitorUpdater.set({ id: bundle.id })
+
+  // 正常情况下 set() 后 WebView 立刻 reload,以下代码不会执行
+  // 如果执行到了,说明 set 静默失败,采集诊断信息
+  await new Promise((r) => setTimeout(r, 1500))
+  const after = await CapacitorUpdater.list().catch((e) => ({ bundles: [], _error: String(e) }))
+  const current = await CapacitorUpdater.current().catch((e) => ({ _error: String(e) }))
+  return {
+    diagnosticsAfterSet: JSON.stringify({ targetBundle: target, listAfter: after, current }, null, 2),
   }
 }
 
-// 检查是否有已下载的更新
-export async function hasDownloadedUpdate(): Promise<boolean> {
+// 列出 native 侧所有已下载的 bundle(诊断用)
+export async function getBundleList(): Promise<string> {
+  if (!Capacitor.isNativePlatform()) return '[non-native]'
   try {
-    await Filesystem.stat({
-      path: `${LOCAL_DIR}/index.html`,
-      directory: Directory.Data,
-    })
-    return true
-  } catch {
-    return false
+    const list = await CapacitorUpdater.list()
+    const current = await CapacitorUpdater.current()
+    return JSON.stringify({ list, current }, null, 2)
+  } catch (err) {
+    return `list-error: ${err instanceof Error ? err.message : String(err)}`
   }
 }
 
-// 获取本地更新目录的URI（用于Capacitor加载）
-export async function getUpdateDirUri(): Promise<string | null> {
+// 通知插件 APP 启动成功(必须在启动时调,不然插件会自动回滚到上一个 bundle)
+export async function notifyAppReady(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
   try {
-    const result = await Filesystem.getUri({
-      path: LOCAL_DIR,
-      directory: Directory.Data,
-    })
-    return result.uri
+    await CapacitorUpdater.notifyAppReady()
   } catch {
-    return null
+    // 首次启动或没 bundle 时可能抛错,忽略
   }
 }
 
-// 清除本地更新缓存
-export async function clearUpdateCache() {
+// 获取当前运行的 bundle 版本
+export async function getCurrentBundleVersion(): Promise<string> {
+  if (!Capacitor.isNativePlatform()) return APP_VERSION
   try {
-    await Filesystem.rmdir({ path: LOCAL_DIR, directory: Directory.Data, recursive: true })
-    await Preferences.remove({ key: 'ota_version' })
+    const { bundle } = await CapacitorUpdater.current()
+    return bundle.version || APP_VERSION
   } catch {
-    // 忽略
+    return APP_VERSION
   }
 }

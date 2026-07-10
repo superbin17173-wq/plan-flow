@@ -184,23 +184,24 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格月视图
+// iOS 月视图
 .month-calendar {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: #F2F2F7;
+  gap: 8px;
+  padding: 0 12px calc(20px + var(--safe-bottom));
 }
 
 .month-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: #FFFFFF;
   text-align: center;
-  padding: 10px 0;
-  font-weight: 500;
-  font-size: 13px;
-  color: #8E8E93;
+  padding: 8px 0 4px;
+  font-weight: 600;
+  font-size: var(--font-size-caption);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .weekday-title {
@@ -210,45 +211,45 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 .month-view {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
-  background: #E5E5EA;
+  gap: 6px;
 }
 
 .day-cell {
-  min-height: 100px;
+  min-height: 82px;
   padding: 8px;
-  background: #FFFFFF;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background var(--transition-fast), transform var(--spring);
+  box-shadow: var(--shadow-xs);
 
-  &:active {
-    background: #E5E5EA;
-  }
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.97); }
 
   &.today {
-    background: rgba(0, 122, 255, 0.08);
+    background: var(--calendar-today-bg);
     .day-number {
-      background: #007AFF;
-      color: white;
+      background: var(--ios-blue);
+      color: #fff;
       border-radius: 50%;
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-weight: 600;
+      font-weight: 700;
     }
   }
 
   &.selected {
-    background: rgba(0, 122, 255, 0.15);
+    background: var(--calendar-selected-bg);
+    box-shadow: 0 0 0 2px var(--ios-blue);
   }
 
   &.otherMonth {
-    background: #F2F2F7;
-    .day-number {
-      color: #C7C7CC;
-    }
+    background: var(--bg-fill-quaternary);
+    box-shadow: none;
+    .day-number { color: var(--text-quaternary); }
   }
 }
 
@@ -259,9 +260,9 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 }
 
 .day-number {
-  font-size: 14px;
+  font-size: var(--font-size-sub);
   font-weight: 500;
-  color: #1A1A1A;
+  color: var(--text-primary);
 }
 
 .day-tasks {
@@ -272,28 +273,24 @@ function handleDoubleClick(date: Date | null, e: MouseEvent) {
 }
 
 .more-tasks {
-  font-size: 11px;
-  color: #8E8E93;
+  font-size: var(--font-size-caption2);
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 2px 4px;
+  font-weight: 500;
 
-  &:active {
-    color: #007AFF;
-  }
+  &:active { color: var(--ios-blue); }
 }
 
 @media (max-width: 768px) {
+  .month-calendar { padding: 0 8px calc(16px + var(--safe-bottom)); gap: 6px; }
+  .month-view { gap: 4px; }
   .day-cell {
-    min-height: 60px;
+    min-height: 56px;
     padding: 4px;
+    border-radius: var(--radius-sm);
   }
-
-  .day-tasks {
-    display: none;
-  }
-
-  .day-number {
-    font-size: 13px;
-  }
+  .day-tasks { display: none; }
+  .day-number { font-size: var(--font-size-footnote); }
 }
 </style>

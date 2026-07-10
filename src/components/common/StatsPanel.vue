@@ -188,7 +188,7 @@ function closePanel() {
         <div class="stat-title">
           能量平衡趋势(近 14 天,负=亏空/减脂,正=盈余/增重)
         </div>
-        <MiniLineChart :data="balanceTrend" color="#E67E22" y-unit="" />
+        <MiniLineChart :data="balanceTrend" color="var(--ios-orange)" y-unit="" />
       </div>
 
       <!-- 今日进度 -->
@@ -197,7 +197,7 @@ function closePanel() {
         <div class="progress-bar">
           <div
             class="progress-fill"
-            :style="{ width: `${stats.today.rate * 100}%`, backgroundColor: stats.today.rate >= 0.8 ? '#7BC47F' : '#F5A962' }"
+            :style="{ width: `${stats.today.rate * 100}%`, backgroundColor: stats.today.rate >= 0.8 ? 'var(--ios-green)' : 'var(--ios-orange)' }"
           ></div>
         </div>
         <div class="stat-numbers">
@@ -243,7 +243,7 @@ function closePanel() {
             当前 {{ weightTrend[weightTrend.length - 1].y }} kg
           </span>
         </div>
-        <MiniLineChart :data="weightTrend" color="#81C9D8" y-unit="kg" />
+        <MiniLineChart :data="weightTrend" color="var(--ios-teal)" y-unit="kg" />
       </div>
 
       <div class="stat-section">
@@ -251,12 +251,12 @@ function closePanel() {
           训练容量(近 30 天)
           <span class="stat-latest">本周 {{ weekWorkoutCount }} 次</span>
         </div>
-        <MiniLineChart :data="volumeTrend" color="#7BC47F" y-unit="kg" />
+        <MiniLineChart :data="volumeTrend" color="var(--ios-green)" y-unit="kg" />
       </div>
 
       <div class="stat-section">
         <div class="stat-title">每日热量(近 14 天)</div>
-        <MiniLineChart :data="kcalTrend" color="#F5A962" y-unit="" />
+        <MiniLineChart :data="kcalTrend" color="var(--ios-orange)" y-unit="" />
       </div>
 
       <div class="divider">📚 任务分类</div>
@@ -285,26 +285,32 @@ function closePanel() {
   position: absolute;
   top: 100%;
   right: 20px;
-  width: 320px;
+  width: 340px;
   max-height: 80vh;
-  background: var(--bg-secondary);
-  border-radius: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-color);
+  border: 0.5px solid var(--separator);
   z-index: 50;
   overflow-y: auto;
+  color: var(--text-primary);
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  background: var(--calendar-header-bg);
+  padding: 14px 16px;
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-bottom: 0.5px solid var(--separator);
 
   h3 {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: var(--font-size-callout);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 }
 
@@ -312,25 +318,24 @@ function closePanel() {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-fill-quaternary);
   color: var(--text-secondary);
   font-size: 16px;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background var(--transition-fast);
 
-  &:hover {
-    background: var(--bg-hover);
-  }
+  &:hover { background: var(--bg-pressed); }
 }
 
-.panel-body {
-  padding: 16px;
-}
+.panel-body { padding: 16px; }
 
 .energy-card {
-  background: linear-gradient(135deg, rgba(245, 169, 98, 0.14), rgba(129, 201, 216, 0.10));
-  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.10), rgba(0, 122, 255, 0.08));
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 16px;
 }
@@ -342,24 +347,31 @@ function closePanel() {
   margin-bottom: 10px;
 }
 
-.e-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.e-title {
+  font-size: var(--font-size-sub);
+  font-weight: 600;
+  color: var(--text-primary);
+}
 .e-actions { display: flex; gap: 6px; }
 .mini-link {
   padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
   color: var(--text-secondary);
-  font-size: 11px;
-  &.primary { background: var(--color-work); color: white; }
+  font-size: var(--font-size-caption2);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  &.primary { background: var(--ios-blue); color: #fff; }
   &:hover { filter: brightness(0.95); }
 }
 
 .e-empty {
   padding: 12px;
-  border-radius: 8px;
-  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   text-align: center;
 }
 
@@ -370,85 +382,99 @@ function closePanel() {
 }
 
 .e-cell {
-  background: var(--bg-secondary);
-  border-radius: 8px;
-  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  box-shadow: var(--shadow-xs);
 
   &.net {
     grid-column: 1 / -1;
-    background: var(--bg-secondary);
+    background: var(--bg-card);
 
     &.pos {
-      background: rgba(231, 76, 60, 0.12);
-      .e-val { color: #e74c3c; }
+      background: rgba(255, 59, 48, 0.12);
+      .e-val { color: var(--ios-red); }
     }
     &.neg {
-      background: rgba(123, 196, 127, 0.14);
-      .e-val { color: #27ae60; }
+      background: rgba(52, 199, 89, 0.14);
+      .e-val { color: var(--ios-green); }
     }
   }
 }
 
-.e-label { font-size: 11px; color: var(--text-tertiary); }
-.e-val {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-  font-family: monospace;
-  &.burn { color: #e67e22; }
-  &.intake { color: #16a085; }
+.e-label {
+  font-size: var(--font-size-caption2);
+  color: var(--text-tertiary);
+  font-weight: 500;
 }
-.e-unit { font-size: 11px; color: var(--text-tertiary); }
+.e-val {
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  &.burn { color: var(--ios-orange); }
+  &.intake { color: var(--ios-teal); }
+}
+.e-unit {
+  font-size: var(--font-size-caption2);
+  color: var(--text-tertiary);
+}
 
 .stat-section {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .stat-title {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   color: var(--text-tertiary);
   margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .stat-latest {
-  color: var(--color-work);
+  color: var(--ios-blue);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-size-caption);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .divider {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--font-size-footnote);
+  font-weight: 700;
   color: var(--text-primary);
-  padding: 8px 0 4px;
-  border-top: 1px solid var(--border-color);
-  margin: 8px 0 4px;
+  padding: 10px 0 4px;
+  border-top: 0.5px solid var(--separator);
+  margin: 10px 0 6px;
 }
 
 .progress-bar {
   height: 8px;
-  background: var(--bg-primary);
+  background: var(--bg-fill-quaternary);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--color-work);
+  background: var(--ios-blue);
   transition: width 0.3s;
 }
 
 .stat-numbers {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
   margin-top: 4px;
   text-align: right;
+  font-family: var(--font-mono);
 }
 
 .category-stats {
@@ -461,7 +487,7 @@ function closePanel() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
 }
 
 .cat-dot {
@@ -477,11 +503,13 @@ function closePanel() {
 
 .cat-count {
   color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
 
 .cat-rate {
-  color: var(--color-work);
-  font-weight: 500;
+  color: var(--ios-blue);
+  font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 @media (max-width: 768px) {
@@ -491,6 +519,7 @@ function closePanel() {
     top: 60px;
     width: 100%;
     border-radius: 0;
+    max-height: none;
   }
 }
 </style>

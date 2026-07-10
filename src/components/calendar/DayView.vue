@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed } from 'vue'
 import dayjs from 'dayjs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
-import { timeToMinutes, minutesToTime, getTaskPosition, getConflictingTasks, isTimedTask } from '../../utils/timeUtils'
-import { useNow, isPastHour, isPastTime } from '../../composables/useNow'
-import TaskBlock from './TaskBlock.vue'
+import { isTimedTask } from '../../utils/timeUtils'
+import { useNow, isPastTime } from '../../composables/useNow'
 import DayTimePie from './DayTimePie.vue'
 
 const uiStore = useUiStore()
@@ -15,104 +14,47 @@ const settingStore = useSettingStore()
 const now = useNow()
 
 // 当天任务
-const dayTasks = computed(() => {
-  return taskStore.getTasksByDate(uiStore.selectedDate)
-})
+const dayTasks = computed(() => taskStore.getTasksByDate(uiStore.selectedDate))
 
-// 时间轴上渲染的定时任务
-const timedTasks = computed(() => dayTasks.value.filter(isTimedTask))
+// 定时任务（有 startTime/endTime）按开始时间排序
+const timedTasks = computed(() =>
+  dayTasks.value
+    .filter(isTimedTask)
+    .slice()
+    .sort((a: any, b: any) => (a.startTime || '').localeCompare(b.startTime || ''))
+)
 
-// 未排时段任务(duration + anytime)
-const unscheduledTasks = computed(() => dayTasks.value.filter(t => !isTimedTask(t)))
+// 有预计时长的任务（floating duration）
+const durationTasks = computed(() =>
+  dayTasks.value.filter((t: any) => !isTimedTask(t) && t.durationMinutes != null)
+)
 
-// 未排时段任务的显示文本
-function unscheduledLabel(task: any): string {
-  if (task.durationMinutes != null) {
-    const m = task.durationMinutes
-    if (m >= 60) {
-      const h = m / 60
-      return `预计 ${Number.isInteger(h) ? h : h.toFixed(1)}h`
-    }
-    return `预计 ${m}m`
+// 全天/待办任务（anytime）
+const anytimeTasks = computed(() =>
+  dayTasks.value.filter((t: any) => !isTimedTask(t) && t.durationMinutes == null)
+)
+
+const hasAnyTask = computed(() => dayTasks.value.length > 0)
+
+function formatDuration(m: number): string {
+  if (m >= 60) {
+    const h = m / 60
+    return `${Number.isInteger(h) ? h : h.toFixed(1)} 小时`
   }
-  return '全天'
+  return `${m} 分钟`
 }
 
-// 小时列表 (0-23)
-const hours = Array.from({ length: 24 }, (_, i) => i)
-
-// 格式化小时显示
-function formatHour(hour: number): string {
-  if (settingStore.settings.timeFormat === '12h') {
-    const period = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
-    return `${displayHour} ${period}`
-  }
-  return `${String(hour).padStart(2, '0')}:00`
-}
-
-// 点击时间槽创建任务
-function handleTimeSlotClick(hour: number, e: MouseEvent) {
-  if (isPastHour(uiStore.selectedDate, hour, now.value)) return
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-  const y = e.clientY - rect.top
-  const minuteOffset = Math.floor((y / 60) * 60)
-  const startMinutes = hour * 60 + minuteOffset
-  const startTime = minutesToTime(startMinutes)
-  const endTime = minutesToTime(Math.min(startMinutes + 60, 1440))
-  uiStore.openTaskForm(undefined, uiStore.selectedDate, startTime)
-}
-
-// 判断某小时是否已过去
-function hourIsPast(hour: number): boolean {
-  return isPastHour(uiStore.selectedDate, hour, now.value)
-}
-
-// 判断某任务是否已结束
 function taskIsPast(task: any): boolean {
   if (!task.endTime) return false
   return isPastTime(uiStore.selectedDate, task.endTime, now.value)
 }
 
-// 计算任务重叠层级
-function getOverlapIndex(task: any): number {
-  if (!isTimedTask(task)) return 0
-  const tasks = timedTasks.value.filter(t => !t.isCompleted)
-  const conflicts = getConflictingTasks(tasks, task.startTime, task.endTime)
-  const index = conflicts.findIndex(t => t.id === task.id)
-  return index
-}
-
-// 拖拽状态
-const draggingTask = ref<string | null>(null)
-
-function handleDragStart(taskId: string) {
-  draggingTask.value = taskId
-}
-
-function handleDragEnd() {
-  draggingTask.value = null
-}
-
 // 返回上一视图
-function goBack() {
-  uiStore.goBack()
-}
+function goBack() { uiStore.goBack() }
+function prevDay() { uiStore.goPrev() }
+function nextDay() { uiStore.goNext() }
+function goToday() { uiStore.goToday() }
 
-// 日期导航
-function prevDay() {
-  uiStore.goPrev()
-}
-
-function nextDay() {
-  uiStore.goNext()
-}
-
-function goToday() {
-  uiStore.goToday()
-}
-
-// 获取相对日期
 function getRelativeDate(): string {
   const d = dayjs(uiStore.selectedDate)
   const today = dayjs()
@@ -153,8 +95,8 @@ function getRelativeDate(): string {
       </button>
     </div>
 
-    <!-- 时间统计圆饼图 -->
-    <div class="time-stats">
+    <!-- 时间统计圆饼图（仅有任务时显示） -->
+    <div v-if="hasAnyTask" class="time-stats">
       <DayTimePie
         :tasks="dayTasks"
         :sleep-start="settingStore.settings.sleepStartTime"
@@ -162,272 +104,303 @@ function getRelativeDate(): string {
       />
     </div>
 
-    <!-- 未排时段任务(duration + anytime) -->
-    <div v-if="unscheduledTasks.length > 0" class="unscheduled-strip">
-      <div class="unscheduled-label">⏳ 未排时段</div>
-      <div class="unscheduled-chips">
-        <button
-          v-for="task in unscheduledTasks"
-          :key="task.id"
-          class="unscheduled-chip"
-          :class="{ done: task.isCompleted }"
-          :style="{ borderColor: task.color }"
-          @click="uiStore.openTaskCard(task.id)"
-        >
-          <span class="chip-dot" :style="{ backgroundColor: task.color }"></span>
-          <span class="chip-title">{{ task.title }}</span>
-          <span class="chip-time">{{ unscheduledLabel(task) }}</span>
+    <!-- 主内容 -->
+    <div class="day-body">
+      <!-- 空状态 -->
+      <div v-if="!hasAnyTask" class="empty-day">
+        <div class="empty-icon">☀️</div>
+        <div class="empty-text">今天无计划</div>
+        <div class="empty-hint">点击 “新建任务” 开始规划</div>
+        <button class="empty-cta" @click="uiStore.openTaskForm(undefined, uiStore.selectedDate)">
+          + 新建任务
         </button>
       </div>
-    </div>
 
-    <!-- 日内容 -->
-    <div class="day-body">
-      <!-- 时间轴 -->
-      <div class="time-axis">
-        <div
-          v-for="hour in hours"
-          :key="hour"
-          class="hour-label"
-          :class="{ past: hourIsPast(hour) }"
-        >
-          {{ formatHour(hour) }}
-        </div>
-      </div>
+      <!-- 有任务：分组列表 -->
+      <template v-else>
+        <!-- 定时任务 -->
+        <section v-if="timedTasks.length > 0" class="task-group">
+          <div class="group-title">🕒 定时安排</div>
+          <div class="task-list">
+            <button
+              v-for="task in timedTasks"
+              :key="task.id"
+              class="task-row"
+              :class="{ done: task.isCompleted, past: taskIsPast(task) }"
+              :style="{ '--task-color': task.color }"
+              @click="uiStore.openTaskCard(task.id)"
+            >
+              <span class="row-dot" :style="{ backgroundColor: task.color }"></span>
+              <span class="row-time">{{ task.startTime }}<span v-if="task.endTime"> - {{ task.endTime }}</span></span>
+              <span class="row-title">{{ task.title }}</span>
+              <span class="row-arrow">›</span>
+            </button>
+          </div>
+        </section>
 
-      <!-- 任务区域 -->
-      <div class="task-area">
-        <!-- 小时网格 -->
-        <div class="hour-grid">
-          <div
-            v-for="hour in hours"
-            :key="hour"
-            class="hour-slot"
-            :class="{ past: hourIsPast(hour) }"
-            @click="handleTimeSlotClick(hour, $event)"
-          ></div>
-        </div>
+        <!-- 有预计时长（无固定时间） -->
+        <section v-if="durationTasks.length > 0" class="task-group">
+          <div class="group-title">⏳ 花费时长</div>
+          <div class="task-list">
+            <button
+              v-for="task in durationTasks"
+              :key="task.id"
+              class="task-row"
+              :class="{ done: task.isCompleted }"
+              :style="{ '--task-color': task.color }"
+              @click="uiStore.openTaskCard(task.id)"
+            >
+              <span class="row-dot" :style="{ backgroundColor: task.color }"></span>
+              <span class="row-time">{{ formatDuration(task.durationMinutes!) }}</span>
+              <span class="row-title">{{ task.title }}</span>
+              <span class="row-arrow">›</span>
+            </button>
+          </div>
+        </section>
 
-        <!-- 任务块(仅定时任务) -->
-        <TaskBlock
-          v-for="task in timedTasks"
-          :key="task.id"
-          :task="task"
-          :hour-height="60"
-          :overlap-index="getOverlapIndex(task)"
-          :is-dragging="draggingTask === task.id"
-          :is-past="taskIsPast(task)"
-          @drag-start="handleDragStart"
-          @drag-end="handleDragEnd"
-          @click="uiStore.openTaskCard(task.id)"
-        />
-      </div>
+        <!-- 全天待办 -->
+        <section v-if="anytimeTasks.length > 0" class="task-group">
+          <div class="group-title">📌 全天待办</div>
+          <div class="task-list">
+            <button
+              v-for="task in anytimeTasks"
+              :key="task.id"
+              class="task-row"
+              :class="{ done: task.isCompleted }"
+              :style="{ '--task-color': task.color }"
+              @click="uiStore.openTaskCard(task.id)"
+            >
+              <span class="row-dot" :style="{ backgroundColor: task.color }"></span>
+              <span class="row-title">{{ task.title }}</span>
+              <span class="row-arrow">›</span>
+            </button>
+          </div>
+        </section>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-// iOS 风格日视图
+// iOS 日视图（列表模式）
 .day-calendar {
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  border-radius: 12px;
-  overflow-y: auto;
-  max-height: calc(100vh - 100px);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100%;
+  padding-bottom: calc(20px + var(--safe-bottom));
 }
 
 .day-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  background: #F2F2F7;
-  border-bottom: 1px solid #E5E5EA;
+  padding: 14px 16px;
+  background: var(--bg-primary);
 }
 
 .nav-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .nav-btn {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
-  color: #007AFF;
+  color: var(--ios-blue);
   font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--spring);
 
-  &:active { opacity: 0.6; }
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.9); background: var(--bg-pressed); }
 
   &.today-btn {
     width: auto;
     padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 15px;
-    background: #007AFF;
-    color: white;
-    font-weight: 500;
+    background: var(--ios-blue);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 122, 255, 0.28);
   }
 }
 
-.day-info {
-  text-align: center;
-}
+.day-info { text-align: center; }
 
 .day-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font-size: var(--font-size-headline);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .day-relative {
-  font-size: 14px;
-  color: #8E8E93;
-  margin-top: 4px;
+  font-size: var(--font-size-sub);
+  color: var(--text-tertiary);
+  margin-top: 3px;
 }
 
 .add-task-btn {
-  padding: 10px 20px;
-  border-radius: 10px;
-  background: #007AFF;
-  color: white;
-  font-size: 15px;
-  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  background: var(--ios-blue);
+  color: #fff;
+  font-size: var(--font-size-sub);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.28);
+  transition: transform var(--spring), opacity var(--transition-fast);
 
-  &:active { opacity: 0.8; }
-}
-
-.day-body {
-  display: flex;
-  position: relative;
+  &:active { transform: scale(0.97); opacity: 0.9; }
 }
 
 .time-stats {
+  margin: 8px 16px 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
   padding: 12px 16px;
-  background: #F2F2F7;
-  border-bottom: 1px solid #E5E5EA;
+  box-shadow: var(--shadow-xs);
 }
 
-.unscheduled-strip {
-  padding: 10px 16px 12px;
-  background: #F2F2F7;
-  border-bottom: 1px solid #E5E5EA;
+.day-body {
+  flex: 1;
+  padding: 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 20px;
 }
 
-.unscheduled-label {
-  font-size: 12px;
-  color: #8E8E93;
-  font-weight: 500;
-}
-
-.unscheduled-chips {
+// 空状态
+.empty-day {
+  flex: 1;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px 40px;
+  color: var(--text-tertiary);
+
+  .empty-icon {
+    font-size: 54px;
+    margin-bottom: 12px;
+    opacity: 0.85;
+  }
+  .empty-text {
+    font-size: var(--font-size-title3);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .empty-hint {
+    font-size: var(--font-size-sub);
+    color: var(--text-tertiary);
+    margin-bottom: 22px;
+  }
+  .empty-cta {
+    padding: 12px 26px;
+    min-height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--ios-blue);
+    color: #fff;
+    font-size: var(--font-size-callout);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.28);
+    transition: transform var(--spring), opacity var(--transition-fast);
+    &:active { transform: scale(0.97); opacity: 0.9; }
+  }
 }
 
-.unscheduled-chip {
-  display: inline-flex;
-  align-items: center;
+.task-group {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #FFFFFF;
-  border: 1px solid transparent;
-  border-left-width: 3px;
-  font-size: 13px;
-  color: #1A1A1A;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  max-width: 100%;
+}
 
-  &.done {
-    opacity: 0.5;
-    text-decoration: line-through;
+.group-title {
+  padding: 0 8px;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.task-list {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.task-row {
+  --task-color: var(--ios-blue);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 52px;
+  background: var(--bg-card);
+  border: none;
+  border-left: 3px solid var(--task-color);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast);
+
+  &:active { background: var(--bg-pressed); }
+
+  & + .task-row {
+    border-top: 0.5px solid var(--separator);
   }
 
-  .chip-dot {
+  &.done {
+    opacity: 0.55;
+    .row-title { text-decoration: line-through; }
+  }
+
+  &.past { opacity: 0.65; }
+
+  .row-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
-  .chip-title {
-    max-width: 12em;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .row-time {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-footnote);
+    color: var(--text-secondary);
+    font-weight: 600;
+    min-width: 82px;
     white-space: nowrap;
   }
 
-  .chip-time {
-    color: #8E8E93;
-    font-size: 12px;
-  }
-}
-.time-axis {
-  width: 60px;
-  flex-shrink: 0;
-  background: #F2F2F7;
-  border-right: 1px solid #E5E5EA;
-  display: flex;
-  flex-direction: column;
-}
-
-.hour-label {
-  height: 60px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #8E8E93;
-  border-bottom: 1px solid #E5E5EA;
-  box-sizing: border-box;
-
-  &.past {
-    color: #C7C7CC;
-    opacity: 0.55;
-  }
-}
-
-.task-area {
-  flex: 1;
-  position: relative;
-  min-height: 1440px;
-}
-
-.hour-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-}
-
-.hour-slot {
-  height: 60px;
-  flex-shrink: 0;
-  border-bottom: 1px solid #E5E5EA;
-  pointer-events: auto;
-  box-sizing: border-box;
-
-  &:active {
-    background: rgba(0, 122, 255, 0.08);
+  .row-title {
+    flex: 1;
+    font-size: var(--font-size-callout);
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
-  &.past {
-    background: rgba(0, 0, 0, 0.03);
-    cursor: not-allowed;
+  .row-arrow {
+    color: var(--text-quaternary);
+    font-size: 18px;
+    font-weight: 500;
   }
 }
 
@@ -437,20 +410,14 @@ function getRelativeDate(): string {
     flex-wrap: wrap;
     gap: 12px;
   }
-
   .day-info {
     order: -1;
     width: 100%;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
-
-  .nav-buttons {
-    flex: 1;
-  }
-
-  .add-task-btn {
-    padding: 8px 14px;
-    font-size: 14px;
-  }
+  .nav-buttons { flex: 1; }
+  .add-task-btn { padding: 8px 14px; }
+  .day-body { padding: 0 12px; gap: 16px; }
+  .task-row .row-time { min-width: 70px; }
 }
 </style>

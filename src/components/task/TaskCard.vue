@@ -269,124 +269,122 @@ const dateDisplay = computed(() => {
 .card-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
+  padding: 0;
 }
 
 .task-card {
-  background: var(--bg-secondary);
-  border-radius: 16px 16px 0 0;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-xxl) var(--radius-xxl) 0 0;
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  border-top: 4px solid;
+  box-shadow: var(--shadow-xl);
+  border-top: 3px solid;
+  padding-bottom: var(--safe-bottom);
 }
 
 .card-header {
-  padding: 20px;
-  color: white;
+  padding: 20px 20px 16px;
+  color: #fff;
+  position: relative;
 }
 
 .card-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .card-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 
-  &.completed {
-    text-decoration: line-through;
-    opacity: 0.8;
-  }
+  &.completed { text-decoration: line-through; opacity: 0.78; }
 }
 
 .close-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   color: white;
-  font-size: 20px;
+  font-size: 18px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
+  &:hover { background: rgba(255, 255, 255, 0.34); }
 }
 
 .card-meta {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
-  font-size: 14px;
-  opacity: 0.9;
+  margin-top: 10px;
+  font-size: var(--font-size-sub);
+  opacity: 0.95;
+  flex-wrap: wrap;
 }
 
-.card-body {
-  padding: 20px;
-}
+.card-body { padding: 18px 20px; }
 
-.card-section {
-  margin-bottom: 16px;
-}
+.card-section { margin-bottom: 16px; }
+.card-section:last-child { margin-bottom: 0; }
 
 .section-label {
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   color: var(--text-tertiary);
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
 }
 
 .section-content {
-  font-size: 14px;
+  font-size: var(--font-size-sub);
   color: var(--text-primary);
+  line-height: 1.5;
 }
 
 .priority-tag {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
 
-  &.high {
-    background: rgba(231, 76, 60, 0.2);
-    color: #E74C3C;
-  }
-
-  &.medium {
-    background: rgba(245, 169, 98, 0.2);
-    color: #F5A962;
-  }
-
-  &.low {
-    background: rgba(168, 168, 168, 0.2);
-    color: #A8A8A8;
-  }
+  &.high   { background: rgba(255, 59, 48, 0.16); color: var(--ios-red); }
+  &.medium { background: rgba(255, 149, 0, 0.16); color: var(--ios-orange); }
+  &.low    { background: var(--bg-fill-quaternary); color: var(--text-tertiary); }
 }
 
 .workout-section .section-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   color: var(--text-primary);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .study-section {
-  background: rgba(108, 155, 235, 0.06);
-  border: 1px solid rgba(108, 155, 235, 0.2);
-  border-radius: 10px;
+  background: rgba(88, 86, 214, 0.06);
+  border: 1px solid rgba(88, 86, 214, 0.18);
+  border-radius: var(--radius-md);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -396,59 +394,61 @@ const dateDisplay = computed(() => {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     color: var(--text-primary);
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
   }
 }
 
 .study-badge {
   margin-left: auto;
   padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  background: rgba(108, 155, 235, 0.18);
-  color: rgb(80, 130, 220);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption2);
+  background: rgba(88, 86, 214, 0.18);
+  color: var(--ios-indigo);
+  font-weight: 600;
 }
 
 .study-subject {
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .study-file {
-  font-size: 11px;
+  font-size: var(--font-size-caption2);
   color: var(--text-tertiary);
 }
 
 .study-material {
   padding: 10px 12px;
   background: var(--bg-primary);
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
   color: var(--text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 120px;
   overflow-y: auto;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .study-review-btn {
   padding: 10px 18px;
-  background: rgb(80, 130, 220);
+  background: var(--ios-indigo);
   color: white;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sub);
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.15s;
+  border: none;
+  transition: transform var(--spring), filter var(--transition-fast);
 
-  &:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.05);
-  }
+  &:hover { filter: brightness(1.08); }
+  &:active { transform: scale(0.97); }
 }
 
 .study-history {
@@ -460,46 +460,45 @@ const dateDisplay = computed(() => {
 
 .mastery-chip {
   padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption2);
+  font-weight: 600;
 
-  &.mastery-again { background: rgba(240, 100, 100, 0.15); color: rgb(200, 70, 70); }
-  &.mastery-hard  { background: rgba(240, 160, 60, 0.15); color: rgb(200, 130, 40); }
-  &.mastery-good  { background: rgba(80, 180, 100, 0.15); color: rgb(60, 150, 80); }
-  &.mastery-easy  { background: rgba(100, 155, 235, 0.15); color: rgb(80, 130, 220); }
+  &.mastery-again { background: rgba(255, 59, 48, 0.14); color: var(--ios-red); }
+  &.mastery-hard  { background: rgba(255, 149, 0, 0.15); color: var(--ios-orange); }
+  &.mastery-good  { background: rgba(52, 199, 89, 0.15); color: var(--ios-green); }
+  &.mastery-easy  { background: rgba(0, 122, 255, 0.15); color: var(--ios-blue); }
 }
 
 .workout-badge {
   margin-left: auto;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(242, 123, 123, 0.15);
-  color: #d85555;
-  font-size: 11px;
-  font-weight: 500;
+  border-radius: var(--radius-full);
+  background: rgba(255, 45, 85, 0.14);
+  color: var(--ios-pink);
+  font-size: var(--font-size-caption2);
+  font-weight: 600;
 }
 
 .kcal-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   margin-top: 8px;
-  background: linear-gradient(135deg, rgba(245, 169, 98, 0.16), rgba(231, 76, 60, 0.10));
-  border-radius: 8px;
-  font-size: 13px;
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.14), rgba(255, 59, 48, 0.08));
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
   color: var(--text-secondary);
 
   b {
-    color: #e67e22;
-    font-size: 16px;
-    font-family: monospace;
+    color: var(--ios-orange);
+    font-size: var(--font-size-callout);
+    font-family: var(--font-mono);
   }
-
   .kcal-tip {
     color: var(--text-tertiary);
-    font-size: 11px;
+    font-size: var(--font-size-caption2);
     margin-left: auto;
   }
 }
@@ -512,9 +511,9 @@ const dateDisplay = computed(() => {
 }
 
 .ex-item {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 8px 10px;
+  background: var(--bg-fill-quaternary);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -524,21 +523,19 @@ const dateDisplay = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
 }
 
 .ex-tag {
   background: var(--color-work);
   color: white;
   padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption2);
+  font-weight: 600;
 }
 
-.ex-name {
-  color: var(--text-primary);
-  font-weight: 500;
-}
+.ex-name { color: var(--text-primary); font-weight: 600; }
 
 .ex-sets {
   display: flex;
@@ -548,71 +545,62 @@ const dateDisplay = computed(() => {
 }
 
 .set-chip {
-  background: var(--bg-hover);
+  background: var(--bg-card);
   color: var(--text-secondary);
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: monospace;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-caption);
+  font-family: var(--font-mono);
 }
 
 .card-footer {
   display: flex;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
+  gap: 10px;
+  padding: 14px 20px calc(14px + var(--safe-bottom));
+  border-top: 0.5px solid var(--separator);
+  background: var(--bg-card);
 }
 
 .complete-btn, .edit-btn, .delete-btn {
   flex: 1;
   padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.2s;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--spring), opacity var(--transition-fast);
+
+  &:active { transform: scale(0.97); opacity: 0.85; }
 }
 
 .complete-btn {
-  background: var(--color-work);
+  background: var(--ios-blue);
   color: white;
 
   &.completed {
-    background: var(--bg-primary);
+    background: var(--bg-fill-quaternary);
     color: var(--text-secondary);
-  }
-
-  &:hover {
-    filter: brightness(1.1);
   }
 }
 
 .edit-btn {
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-
-  &:hover {
-    background: var(--bg-hover);
-  }
+  background: var(--bg-fill-quaternary);
+  color: var(--text-primary);
 }
 
 .delete-btn {
-  background: rgba(231, 76, 60, 0.1);
-  color: #E74C3C;
-
-  &:hover {
-    background: rgba(231, 76, 60, 0.2);
-  }
+  background: rgba(255, 59, 48, 0.14);
+  color: var(--ios-red);
 }
 
 // 动画
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.24s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .slide-up-enter-active, .slide-up-leave-active {
-  transition: transform 0.3s, opacity 0.3s;
+  transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.24s;
 }
 .slide-up-enter-from, .slide-up-leave-to {
   transform: translateY(100%);
@@ -620,12 +608,7 @@ const dateDisplay = computed(() => {
 }
 
 @media (min-width: 769px) {
-  .card-overlay {
-    align-items: center;
-  }
-
-  .task-card {
-    border-radius: 16px;
-  }
+  .card-overlay { align-items: center; padding: 16px; }
+  .task-card { border-radius: var(--radius-xl); }
 }
 </style>

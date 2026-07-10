@@ -581,7 +581,7 @@ const todaySummary = computed(() => {
   font-size: 12px;
   &:hover { background: var(--bg-hover); }
   &.primary { background: var(--color-work); color: white; }
-  &.danger { color: #c0392b; }
+  &.danger { color: var(--ios-red); }
   &.ghost {
     background: transparent;
     border: 1px dashed var(--border-color);

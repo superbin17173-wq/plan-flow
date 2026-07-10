@@ -52,33 +52,29 @@ const displayTitle = computed(() => {
 <style scoped lang="scss">
 .task-chip {
   display: inline-block;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: 2px 8px;
   font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
   color: white;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform var(--spring), filter var(--transition-fast);
   user-select: none;
 
-  &:hover {
-    filter: brightness(1.15);
-    transform: scale(1.02);
-  }
+  &:hover { filter: brightness(1.1); transform: scale(1.02); }
 
   &.priority-high {
-    border-left: 3px solid #E74C3C;
+    border-left: 3px solid var(--ios-red);
   }
 
-  &.priority-low {
-    opacity: 0.6;
-  }
+  &.priority-low { opacity: 0.6; }
 
   &.completed {
-    opacity: 0.5;
+    opacity: 0.55;
     text-decoration: line-through;
   }
 }

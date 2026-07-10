@@ -1,0 +1,73 @@
+- generic [ref=e28]:
+  - banner [ref=e29]:
+    - generic [ref=e30]:
+      - heading "PlanFlow" [level=1] [ref=e31]
+      - generic [ref=e32]:
+        - button "上一页" [ref=e33] [cursor=pointer]: ‹
+        - button "今天" [ref=e34] [cursor=pointer]
+        - button "下一页" [ref=e35] [cursor=pointer]: ›
+      - generic [ref=e36]: 2026年07月
+    - generic [ref=e38]:
+      - button "年" [ref=e39] [cursor=pointer]
+      - button "月" [ref=e40] [cursor=pointer]
+      - button "周" [ref=e41] [cursor=pointer]
+      - button "日" [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - button "+" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: +
+      - button "🔍" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 🔍
+      - button "📥" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 📥
+      - button "📊" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 📊
+      - button "⚙️" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: ⚙️
+      - button "☀️" [ref=e54] [cursor=pointer]:
+        - generic [ref=e55]: ☀️
+  - main [ref=e56]:
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e59]: 周一
+        - generic [ref=e60]: 周二
+        - generic [ref=e61]: 周三
+        - generic [ref=e62]: 周四
+        - generic [ref=e63]: 周五
+        - generic [ref=e64]: 周六
+        - generic [ref=e65]: 周日
+      - generic [ref=e66]:
+        - generic [ref=e69] [cursor=pointer]: "29"
+        - generic [ref=e72] [cursor=pointer]: "30"
+        - generic [ref=e75] [cursor=pointer]: "1"
+        - generic [ref=e78] [cursor=pointer]: "2"
+        - generic [ref=e81] [cursor=pointer]: "3"
+        - generic [ref=e84] [cursor=pointer]: "4"
+        - generic [ref=e87] [cursor=pointer]: "5"
+        - generic [ref=e90] [cursor=pointer]: "6"
+        - generic [ref=e93] [cursor=pointer]: "7"
+        - generic [ref=e96] [cursor=pointer]: "8"
+        - generic [ref=e99] [cursor=pointer]: "9"
+        - generic [ref=e102] [cursor=pointer]: "10"
+        - generic [ref=e105] [cursor=pointer]: "11"
+        - generic [ref=e108] [cursor=pointer]: "12"
+        - generic [ref=e111] [cursor=pointer]: "13"
+        - generic [ref=e114] [cursor=pointer]: "14"
+        - generic [ref=e117] [cursor=pointer]: "15"
+        - generic [ref=e120] [cursor=pointer]: "16"
+        - generic [ref=e123] [cursor=pointer]: "17"
+        - generic [ref=e126] [cursor=pointer]: "18"
+        - generic [ref=e129] [cursor=pointer]: "19"
+        - generic [ref=e132] [cursor=pointer]: "20"
+        - generic [ref=e135] [cursor=pointer]: "21"
+        - generic [ref=e138] [cursor=pointer]: "22"
+        - generic [ref=e141] [cursor=pointer]: "23"
+        - generic [ref=e144] [cursor=pointer]: "24"
+        - generic [ref=e147] [cursor=pointer]: "25"
+        - generic [ref=e150] [cursor=pointer]: "26"
+        - generic [ref=e153] [cursor=pointer]: "27"
+        - generic [ref=e156] [cursor=pointer]: "28"
+        - generic [ref=e159] [cursor=pointer]: "29"
+        - generic [ref=e162] [cursor=pointer]: "30"
+        - generic [ref=e165] [cursor=pointer]: "31"
+        - generic [ref=e168] [cursor=pointer]: "2"
+        - generic [ref=e171] [cursor=pointer]: "3"

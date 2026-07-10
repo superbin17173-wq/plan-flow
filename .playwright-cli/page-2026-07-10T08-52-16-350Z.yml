@@ -1,0 +1,73 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - heading "PlanFlow" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - button "上一页" [ref=e9] [cursor=pointer]: ‹
+        - button "今天" [ref=e10] [cursor=pointer]
+        - button "下一页" [ref=e11] [cursor=pointer]: ›
+      - generic [ref=e12]: 2026年07月
+    - generic [ref=e14]:
+      - button "年" [ref=e15] [cursor=pointer]
+      - button "月" [active] [ref=e16] [cursor=pointer]
+      - button "周" [ref=e17] [cursor=pointer]
+      - button "日" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - button "+" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: +
+      - button "🔍" [ref=e22] [cursor=pointer]:
+        - generic [ref=e23]: 🔍
+      - button "📥" [ref=e24] [cursor=pointer]:
+        - generic [ref=e25]: 📥
+      - button "📊" [ref=e26] [cursor=pointer]:
+        - generic [ref=e27]: 📊
+      - button "⚙️" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: ⚙️
+      - button "☀️" [ref=e30] [cursor=pointer]:
+        - generic [ref=e31]: ☀️
+  - main [ref=e32]:
+    - generic [ref=e92]:
+      - generic [ref=e93]:
+        - generic [ref=e94]: 周一
+        - generic [ref=e95]: 周二
+        - generic [ref=e96]: 周三
+        - generic [ref=e97]: 周四
+        - generic [ref=e98]: 周五
+        - generic [ref=e99]: 周六
+        - generic [ref=e100]: 周日
+      - generic [ref=e101]:
+        - generic [ref=e104] [cursor=pointer]: "29"
+        - generic [ref=e107] [cursor=pointer]: "30"
+        - generic [ref=e110] [cursor=pointer]: "1"
+        - generic [ref=e113] [cursor=pointer]: "2"
+        - generic [ref=e116] [cursor=pointer]: "3"
+        - generic [ref=e119] [cursor=pointer]: "4"
+        - generic [ref=e122] [cursor=pointer]: "5"
+        - generic [ref=e125] [cursor=pointer]: "6"
+        - generic [ref=e128] [cursor=pointer]: "7"
+        - generic [ref=e131] [cursor=pointer]: "8"
+        - generic [ref=e134] [cursor=pointer]: "9"
+        - generic [ref=e137] [cursor=pointer]: "10"
+        - generic [ref=e140] [cursor=pointer]: "11"
+        - generic [ref=e143] [cursor=pointer]: "12"
+        - generic [ref=e146] [cursor=pointer]: "13"
+        - generic [ref=e149] [cursor=pointer]: "14"
+        - generic [ref=e152] [cursor=pointer]: "15"
+        - generic [ref=e155] [cursor=pointer]: "16"
+        - generic [ref=e158] [cursor=pointer]: "17"
+        - generic [ref=e161] [cursor=pointer]: "18"
+        - generic [ref=e164] [cursor=pointer]: "19"
+        - generic [ref=e167] [cursor=pointer]: "20"
+        - generic [ref=e170] [cursor=pointer]: "21"
+        - generic [ref=e173] [cursor=pointer]: "22"
+        - generic [ref=e176] [cursor=pointer]: "23"
+        - generic [ref=e179] [cursor=pointer]: "24"
+        - generic [ref=e182] [cursor=pointer]: "25"
+        - generic [ref=e185] [cursor=pointer]: "26"
+        - generic [ref=e188] [cursor=pointer]: "27"
+        - generic [ref=e191] [cursor=pointer]: "28"
+        - generic [ref=e194] [cursor=pointer]: "29"
+        - generic [ref=e197] [cursor=pointer]: "30"
+        - generic [ref=e200] [cursor=pointer]: "31"
+        - generic [ref=e203] [cursor=pointer]: "2"
+        - generic [ref=e206] [cursor=pointer]: "3"

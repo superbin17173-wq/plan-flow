@@ -1,153 +1,337 @@
-// iOS 风格设计变量
-// 统一整个应用的 iOS 视觉风格
+// iOS 主题工具类 —— 组件按需引用
+// 变量在 variables.scss 中定义
 
-:root {
-  // iOS 核心颜色
-  --ios-bg: #F2F2F7;           // iOS 背景灰
-  --ios-card: #FFFFFF;         // 卡片白色
-  --ios-primary: #007AFF;      // iOS 蓝（主色）
-  --ios-red: #FF3B30;          // iOS 红（警示）
-  --ios-green: #34C759;        // iOS 绿（成功）
-  --ios-orange: #FF9500;       // iOS 橙
-  --ios-purple: #AF52DE;       // iOS 紫
-
-  // 文字颜色
-  --ios-text: #1A1A1A;         // 主文字
-  --ios-text-secondary: #8E8E93; // 次要文字
-  --ios-text-tertiary: #C7C7CC;  // 第三级文字
-
-  // 分隔线和边框
-  --ios-separator: #E5E5EA;
-  --ios-border: #C6C6C8;
-
-  // 圆角
-  --ios-radius-sm: 8px;
-  --ios-radius-md: 12px;
-  --ios-radius-lg: 16px;
-  --ios-radius-xl: 20px;
-
-  // 阴影（iOS 风格轻微阴影）
-  --ios-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --ios-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
-
-  // 底部安全区域
-  --ios-safe-area-bottom: env(safe-area-inset-bottom, 20px);
-}
-
-// iOS 风格通用类
+// ==== 卡片：iOS grouped card ====
 .ios-card {
-  background: var(--ios-card);
-  border-radius: var(--ios-radius-md);
-  box-shadow: var(--ios-shadow);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
+.ios-card-inset {
+  padding: var(--spacing-md);
+}
+
+// ==== 分组列表（iOS Settings 风格）====
+.ios-list {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  .ios-list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    min-height: 44px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: var(--font-size-body);
+    transition: background var(--transition-fast);
+    cursor: pointer;
+
+    & + .ios-list-item {
+      border-top: 0.5px solid var(--separator);
+    }
+
+    &:active { background: var(--bg-pressed); }
+
+    .ios-list-title { flex: 1; }
+    .ios-list-value {
+      color: var(--text-tertiary);
+      margin-right: 6px;
+    }
+    .ios-list-arrow {
+      color: var(--text-quaternary);
+      font-size: 14px;
+    }
+  }
+}
+
+.ios-list-group {
+  margin: 0 0 24px;
+
+  .ios-list-group-title {
+    padding: 0 16px 6px;
+    color: var(--text-tertiary);
+    font-size: var(--font-size-footnote);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+}
+
+// ==== 按钮：filled / tinted / plain / danger ====
 .ios-btn {
-  padding: 12px 24px;
-  border-radius: var(--ios-radius-md);
-  background: var(--ios-primary);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 22px;
+  min-height: 44px;
   border: none;
+  border-radius: var(--radius-md);
+  background: var(--ios-blue);
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
+  transition: transform var(--spring), opacity var(--transition-fast);
+  user-select: none;
 
-  &:active {
-    opacity: 0.8;
+  &:hover:not(:disabled) { opacity: 0.92; }
+  &:active:not(:disabled) { transform: scale(0.97); opacity: 0.85; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  &.ios-btn-tinted {
+    background: rgba(0, 122, 255, 0.12);
+    color: var(--ios-blue);
+    .dark & { background: rgba(10, 132, 255, 0.22); }
   }
-
+  &.ios-btn-plain {
+    background: transparent;
+    color: var(--ios-blue);
+    padding: 8px 12px;
+  }
   &.ios-btn-secondary {
-    background: var(--ios-card);
-    color: var(--ios-primary);
+    background: var(--bg-fill-quaternary);
+    color: var(--text-primary);
   }
-
   &.ios-btn-danger {
     background: var(--ios-red);
+    color: #fff;
   }
+  &.ios-btn-danger-tinted {
+    background: rgba(255, 59, 48, 0.14);
+    color: var(--ios-red);
+  }
+  &.ios-btn-sm { padding: 6px 14px; min-height: 32px; font-size: var(--font-size-sub); }
+  &.ios-btn-lg { padding: 14px 28px; min-height: 52px; font-size: var(--font-size-headline); }
+  &.ios-btn-block { width: 100%; }
 }
 
+// ==== 输入框 ====
 .ios-input {
   width: 100%;
-  padding: 14px 16px;
-  border-radius: var(--ios-radius-md);
-  background: var(--ios-card);
-  border: 1px solid var(--ios-separator);
-  font-size: 16px;
-  color: var(--ios-text);
+  padding: 12px 16px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--bg-fill-quaternary);
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 
+  &::placeholder { color: var(--text-tertiary); }
+  &:hover { background: var(--bg-hover); }
   &:focus {
     outline: none;
-    border-color: var(--ios-primary);
+    background: var(--bg-card);
+    border-color: var(--ios-blue);
   }
 }
 
+// ==== 分隔线 ====
 .ios-divider {
-  height: 1px;
-  background: var(--ios-separator);
-  margin: 0 16px;
+  height: 0.5px;
+  background: var(--separator);
+  margin: 8px 16px;
+  border: 0;
 }
 
-// iOS 模态弹窗样式（底部滑入）
-.ios-modal {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--ios-card);
-  border-radius: var(--ios-radius-xl) var(--ios-radius-xl) 0 0;
-  padding-bottom: var(--ios-safe-area-bottom);
-  box-shadow: var(--ios-shadow-lg);
-  max-height: 90vh;
-  overflow-y: auto;
+// ==== 徽章 / Chip ====
+.ios-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-fill-quaternary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  line-height: 1.4;
 
-  .ios-modal-header {
+  &.ios-chip-blue   { background: rgba(0,122,255,0.12); color: var(--ios-blue); }
+  &.ios-chip-green  { background: rgba(52,199,89,0.14); color: var(--ios-green); }
+  &.ios-chip-orange { background: rgba(255,149,0,0.14); color: var(--ios-orange); }
+  &.ios-chip-red    { background: rgba(255,59,48,0.14); color: var(--ios-red); }
+  &.ios-chip-purple { background: rgba(175,82,222,0.14); color: var(--ios-purple); }
+}
+
+// ==== 弹窗（Sheet 底部升起）====
+.ios-sheet-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: iosFadeIn 0.22s ease;
+}
+
+.ios-sheet {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-radius: var(--radius-xxl) var(--radius-xxl) 0 0;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  box-shadow: var(--shadow-lg);
+  max-height: 92vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 640px;
+  animation: iosSlideUp 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+
+  // 顶部抓手
+  &::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--text-quaternary);
+    opacity: 0.5;
+    margin: 8px auto 4px;
+  }
+
+  .ios-sheet-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--ios-separator);
+    padding: 12px 20px 8px;
 
-    .ios-modal-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--ios-text);
+    .ios-sheet-title {
+      font-size: var(--font-size-headline);
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
     }
 
-    .ios-modal-close {
-      font-size: 24px;
-      color: var(--ios-text-secondary);
+    .ios-sheet-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg-fill-quaternary);
+      color: var(--text-secondary);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+      border: none;
+      transition: background var(--transition-fast);
+
+      &:hover { background: var(--bg-pressed); }
     }
   }
 }
 
-// iOS 底部导航栏
-.ios-tab-bar {
-  display: flex;
-  justify-content: space-around;
-  background: var(--ios-card);
-  border-top: 1px solid var(--ios-separator);
-  padding: 8px 0 calc(8px + var(--ios-safe-area-bottom));
-  position: sticky;
-  bottom: 0;
+@keyframes iosFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes iosSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
 
-  .ios-tab-item {
-    text-align: center;
+// ==== 桌面端居中弹窗 ====
+@media (min-width: 769px) {
+  .ios-sheet-mask.ios-sheet-mask-centered {
+    align-items: center;
+  }
+  .ios-sheet.ios-sheet-centered {
+    border-radius: var(--radius-xl);
+    max-height: 85vh;
+    animation: iosScaleIn 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    &::before { display: none; }
+  }
+}
+
+@keyframes iosScaleIn {
+  from { transform: scale(0.94); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+// ==== 毛玻璃条 ====
+.ios-blur-bar {
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.ios-blur-tabbar {
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-top: 0.5px solid var(--separator);
+}
+
+// ==== 分段控制器 ====
+.ios-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--bg-fill-quaternary);
+
+  .ios-segmented-item {
+    padding: 6px 14px;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: var(--font-size-sub);
+    font-weight: 500;
+    border: none;
     cursor: pointer;
-    padding: 4px 12px;
-
-    .ios-tab-icon {
-      font-size: 24px;
-      margin-bottom: 2px;
-    }
-
-    .ios-tab-label {
-      font-size: 10px;
-      color: var(--ios-text-secondary);
-    }
+    transition: background var(--transition-normal), color var(--transition-normal);
 
     &.active {
-      .ios-tab-icon { color: var(--ios-primary); }
-      .ios-tab-label { color: var(--ios-primary); font-weight: 500; }
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .dark &.active {
+      background: var(--bg-elevated);
     }
   }
+}
+
+// ==== Toast (iOS 通知) ====
+.ios-toast {
+  background: var(--material-thick);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+}
+
+// ==== 悬浮按钮 (FAB) ====
+.ios-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ios-blue);
+  color: #fff;
+  border: none;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform var(--spring);
+
+  &:active { transform: scale(0.94); }
+}
+
+// ==== 通用交互反馈 ====
+.ios-tap {
+  transition: transform var(--spring), opacity var(--transition-fast);
+  &:active { transform: scale(0.97); opacity: 0.85; }
 }

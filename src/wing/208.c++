@@ -1,20 +1,34 @@
-class Solution {
-public:
-    double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {
-        int n=nums1.size(),m=nums2.size();
-        if(m>n){
-            vector<int> temp=nums2;
-            nums2=nums1;
-            nums1=temp;
-        }
-        int left=0,right=m;
-        while(left<right){
-            int mid=(left+right)/2;
-            if(){
-                right=mid;
-            }else{
-                left=mid+1;
-            }
-        }
+class MinStack {
+public: 
+    int v[30010]={0};
+    int left=0,right=0;
+    MinStack() {
+
+    }
+    
+    void push(int value) {
+        v[right]=value;
+        right++;
+    }
+    
+    void pop() {
+        right--;
+    }
+    
+    int top() {
+       return v[right-1];
+    }
+    
+    int getMin() {
+        return v[left];
     }
 };
+
+/**
+ * Your Minstack_v object will be instantiated and called as such:
+ * Minstack_v* obj = new Minstack_v();
+ * obj->push(value);
+ * obj->pop();
+ * int param_3 = obj->top();
+ * int param_4 = obj->getMin();
+ */

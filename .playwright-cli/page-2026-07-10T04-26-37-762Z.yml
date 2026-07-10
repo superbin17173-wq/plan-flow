@@ -1,0 +1,234 @@
+- generic [ref=e28]:
+  - banner [ref=e29]:
+    - generic [ref=e30]:
+      - heading "PlanFlow" [level=1] [ref=e31]
+      - generic [ref=e32]:
+        - button "上一页" [ref=e33] [cursor=pointer]: ‹
+        - button "今天" [ref=e34] [cursor=pointer]
+        - button "下一页" [ref=e35] [cursor=pointer]: ›
+      - generic [ref=e36]: 2026年
+    - generic [ref=e38]:
+      - button "年" [ref=e39] [cursor=pointer]
+      - button "月" [ref=e40] [cursor=pointer]
+      - button "周" [ref=e41] [cursor=pointer]
+      - button "日" [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - button "+" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: +
+      - button "🔍" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 🔍
+      - button "📥" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 📥
+      - button "📊" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 📊
+      - button "⚙️" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: ⚙️
+      - button "☀️" [ref=e54] [cursor=pointer]:
+        - generic [ref=e55]: ☀️
+  - main [ref=e56]:
+    - generic [ref=e484]:
+      - generic [ref=e485]:
+        - generic [ref=e486]:
+          - button "‹" [ref=e487] [cursor=pointer]
+          - button "今年" [ref=e488] [cursor=pointer]
+          - button "›" [ref=e489] [cursor=pointer]
+        - generic [ref=e490]: 2026 年 · 共 53 周
+        - generic [ref=e491]:
+          - text: 本周
+          - text: 已过
+      - generic [ref=e494]:
+        - generic [ref=e495]:
+          - generic [ref=e496]: 1月
+          - generic [ref=e497]:
+            - button "W1 12/29-01/04" [ref=e498] [cursor=pointer]:
+              - generic [ref=e500]: W1
+              - generic [ref=e501]: 12/29-01/04
+            - button "W2 01/05-01/11" [ref=e502] [cursor=pointer]:
+              - generic [ref=e504]: W2
+              - generic [ref=e505]: 01/05-01/11
+            - button "W3 01/12-01/18" [ref=e506] [cursor=pointer]:
+              - generic [ref=e508]: W3
+              - generic [ref=e509]: 01/12-01/18
+            - button "W4 01/19-01/25" [ref=e510] [cursor=pointer]:
+              - generic [ref=e512]: W4
+              - generic [ref=e513]: 01/19-01/25
+            - button "W5 01/26-02/01" [ref=e514] [cursor=pointer]:
+              - generic [ref=e516]: W5
+              - generic [ref=e517]: 01/26-02/01
+        - generic [ref=e518]:
+          - generic [ref=e519]: 2月
+          - generic [ref=e520]:
+            - button "W6 02/02-02/08" [ref=e521] [cursor=pointer]:
+              - generic [ref=e523]: W6
+              - generic [ref=e524]: 02/02-02/08
+            - button "W7 02/09-02/15" [ref=e525] [cursor=pointer]:
+              - generic [ref=e527]: W7
+              - generic [ref=e528]: 02/09-02/15
+            - button "W8 02/16-02/22" [ref=e529] [cursor=pointer]:
+              - generic [ref=e531]: W8
+              - generic [ref=e532]: 02/16-02/22
+            - button "W9 02/23-03/01" [ref=e533] [cursor=pointer]:
+              - generic [ref=e535]: W9
+              - generic [ref=e536]: 02/23-03/01
+        - generic [ref=e537]:
+          - generic [ref=e538]: 3月
+          - generic [ref=e539]:
+            - button "W10 03/02-03/08" [ref=e540] [cursor=pointer]:
+              - generic [ref=e542]: W10
+              - generic [ref=e543]: 03/02-03/08
+            - button "W11 03/09-03/15" [ref=e544] [cursor=pointer]:
+              - generic [ref=e546]: W11
+              - generic [ref=e547]: 03/09-03/15
+            - button "W12 03/16-03/22" [ref=e548] [cursor=pointer]:
+              - generic [ref=e550]: W12
+              - generic [ref=e551]: 03/16-03/22
+            - button "W13 03/23-03/29" [ref=e552] [cursor=pointer]:
+              - generic [ref=e554]: W13
+              - generic [ref=e555]: 03/23-03/29
+        - generic [ref=e556]:
+          - generic [ref=e557]: 4月
+          - generic [ref=e558]:
+            - button "W14 03/30-04/05" [ref=e559] [cursor=pointer]:
+              - generic [ref=e561]: W14
+              - generic [ref=e562]: 03/30-04/05
+            - button "W15 04/06-04/12" [ref=e563] [cursor=pointer]:
+              - generic [ref=e565]: W15
+              - generic [ref=e566]: 04/06-04/12
+            - button "W16 04/13-04/19" [ref=e567] [cursor=pointer]:
+              - generic [ref=e569]: W16
+              - generic [ref=e570]: 04/13-04/19
+            - button "W17 04/20-04/26" [ref=e571] [cursor=pointer]:
+              - generic [ref=e573]: W17
+              - generic [ref=e574]: 04/20-04/26
+            - button "W18 04/27-05/03" [ref=e575] [cursor=pointer]:
+              - generic [ref=e577]: W18
+              - generic [ref=e578]: 04/27-05/03
+        - generic [ref=e579]:
+          - generic [ref=e580]: 5月
+          - generic [ref=e581]:
+            - button "W19 05/04-05/10" [ref=e582] [cursor=pointer]:
+              - generic [ref=e584]: W19
+              - generic [ref=e585]: 05/04-05/10
+            - button "W20 05/11-05/17" [ref=e586] [cursor=pointer]:
+              - generic [ref=e588]: W20
+              - generic [ref=e589]: 05/11-05/17
+            - button "W21 05/18-05/24" [ref=e590] [cursor=pointer]:
+              - generic [ref=e592]: W21
+              - generic [ref=e593]: 05/18-05/24
+            - button "W22 05/25-05/31" [ref=e594] [cursor=pointer]:
+              - generic [ref=e596]: W22
+              - generic [ref=e597]: 05/25-05/31
+        - generic [ref=e598]:
+          - generic [ref=e599]: 6月
+          - generic [ref=e600]:
+            - button "W23 06/01-06/07" [ref=e601] [cursor=pointer]:
+              - generic [ref=e603]: W23
+              - generic [ref=e604]: 06/01-06/07
+            - button "W24 06/08-06/14" [ref=e605] [cursor=pointer]:
+              - generic [ref=e607]: W24
+              - generic [ref=e608]: 06/08-06/14
+            - button "W25 06/15-06/21" [ref=e609] [cursor=pointer]:
+              - generic [ref=e611]: W25
+              - generic [ref=e612]: 06/15-06/21
+            - button "W26 06/22-06/28" [ref=e613] [cursor=pointer]:
+              - generic [ref=e615]: W26
+              - generic [ref=e616]: 06/22-06/28
+        - generic [ref=e617]:
+          - generic [ref=e618]: 7月
+          - generic [ref=e619]:
+            - button "W27 06/29-07/05" [ref=e620] [cursor=pointer]:
+              - generic [ref=e622]: W27
+              - generic [ref=e623]: 06/29-07/05
+            - button "W28 07/06-07/12" [ref=e624] [cursor=pointer]:
+              - generic [ref=e626]: W28
+              - generic [ref=e627]: 07/06-07/12
+            - button "W29 07/13-07/19" [ref=e628] [cursor=pointer]:
+              - generic [ref=e630]: W29
+              - generic [ref=e631]: 07/13-07/19
+            - button "W30 07/20-07/26" [ref=e632] [cursor=pointer]:
+              - generic [ref=e634]: W30
+              - generic [ref=e635]: 07/20-07/26
+            - button "W31 07/27-08/02" [ref=e636] [cursor=pointer]:
+              - generic [ref=e638]: W31
+              - generic [ref=e639]: 07/27-08/02
+        - generic [ref=e640]:
+          - generic [ref=e641]: 8月
+          - generic [ref=e642]:
+            - button "W32 08/03-08/09" [ref=e643] [cursor=pointer]:
+              - generic [ref=e645]: W32
+              - generic [ref=e646]: 08/03-08/09
+            - button "W33 08/10-08/16" [ref=e647] [cursor=pointer]:
+              - generic [ref=e649]: W33
+              - generic [ref=e650]: 08/10-08/16
+            - button "W34 08/17-08/23" [ref=e651] [cursor=pointer]:
+              - generic [ref=e653]: W34
+              - generic [ref=e654]: 08/17-08/23
+            - button "W35 08/24-08/30" [ref=e655] [cursor=pointer]:
+              - generic [ref=e657]: W35
+              - generic [ref=e658]: 08/24-08/30
+        - generic [ref=e659]:
+          - generic [ref=e660]: 9月
+          - generic [ref=e661]:
+            - button "W36 08/31-09/06" [ref=e662] [cursor=pointer]:
+              - generic [ref=e664]: W36
+              - generic [ref=e665]: 08/31-09/06
+            - button "W37 09/07-09/13" [ref=e666] [cursor=pointer]:
+              - generic [ref=e668]: W37
+              - generic [ref=e669]: 09/07-09/13
+            - button "W38 09/14-09/20" [ref=e670] [cursor=pointer]:
+              - generic [ref=e672]: W38
+              - generic [ref=e673]: 09/14-09/20
+            - button "W39 09/21-09/27" [ref=e674] [cursor=pointer]:
+              - generic [ref=e676]: W39
+              - generic [ref=e677]: 09/21-09/27
+        - generic [ref=e678]:
+          - generic [ref=e679]: 10月
+          - generic [ref=e680]:
+            - button "W40 09/28-10/04" [ref=e681] [cursor=pointer]:
+              - generic [ref=e683]: W40
+              - generic [ref=e684]: 09/28-10/04
+            - button "W41 10/05-10/11" [ref=e685] [cursor=pointer]:
+              - generic [ref=e687]: W41
+              - generic [ref=e688]: 10/05-10/11
+            - button "W42 10/12-10/18" [ref=e689] [cursor=pointer]:
+              - generic [ref=e691]: W42
+              - generic [ref=e692]: 10/12-10/18
+            - button "W43 10/19-10/25" [ref=e693] [cursor=pointer]:
+              - generic [ref=e695]: W43
+              - generic [ref=e696]: 10/19-10/25
+            - button "W44 10/26-11/01" [ref=e697] [cursor=pointer]:
+              - generic [ref=e699]: W44
+              - generic [ref=e700]: 10/26-11/01
+        - generic [ref=e701]:
+          - generic [ref=e702]: 11月
+          - generic [ref=e703]:
+            - button "W45 11/02-11/08" [ref=e704] [cursor=pointer]:
+              - generic [ref=e706]: W45
+              - generic [ref=e707]: 11/02-11/08
+            - button "W46 11/09-11/15" [ref=e708] [cursor=pointer]:
+              - generic [ref=e710]: W46
+              - generic [ref=e711]: 11/09-11/15
+            - button "W47 11/16-11/22" [ref=e712] [cursor=pointer]:
+              - generic [ref=e714]: W47
+              - generic [ref=e715]: 11/16-11/22
+            - button "W48 11/23-11/29" [ref=e716] [cursor=pointer]:
+              - generic [ref=e718]: W48
+              - generic [ref=e719]: 11/23-11/29
+        - generic [ref=e720]:
+          - generic [ref=e721]: 12月
+          - generic [ref=e722]:
+            - button "W49 11/30-12/06" [ref=e723] [cursor=pointer]:
+              - generic [ref=e725]: W49
+              - generic [ref=e726]: 11/30-12/06
+            - button "W50 12/07-12/13" [ref=e727] [cursor=pointer]:
+              - generic [ref=e729]: W50
+              - generic [ref=e730]: 12/07-12/13
+            - button "W51 12/14-12/20" [ref=e731] [cursor=pointer]:
+              - generic [ref=e733]: W51
+              - generic [ref=e734]: 12/14-12/20
+            - button "W52 12/21-12/27" [ref=e735] [cursor=pointer]:
+              - generic [ref=e737]: W52
+              - generic [ref=e738]: 12/21-12/27
+            - button "W53 12/28-01/03" [ref=e739] [cursor=pointer]:
+              - generic [ref=e741]: W53
+              - generic [ref=e742]: 12/28-01/03

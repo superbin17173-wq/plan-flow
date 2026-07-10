@@ -297,7 +297,8 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .ios-calendar-view {
-  background: #F2F2F7;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -305,7 +306,10 @@ onMounted(async () => {
 
 // 顶部 header
 .ios-header {
-  background: #F2F2F7;
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-bottom: 0.5px solid var(--separator);
   padding: 12px 16px;
   position: sticky;
   top: 0;
@@ -318,9 +322,10 @@ onMounted(async () => {
     margin-bottom: 12px;
 
     .ios-month {
-      font-size: 20px;
+      font-size: var(--font-size-title3);
       font-weight: 700;
-      color: #1A1A1A;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
     }
 
     .ios-header-actions {
@@ -329,12 +334,16 @@ onMounted(async () => {
 
       .ios-action-btn {
         padding: 8px 16px;
-        border-radius: 8px;
-        background: #007AFF;
+        border-radius: var(--radius-sm);
+        background: var(--ios-blue);
         color: #fff;
-        font-size: 14px;
-        font-weight: 500;
+        font-size: var(--font-size-sub);
+        font-weight: 600;
         border: none;
+        cursor: pointer;
+        transition: transform var(--spring), opacity var(--transition-fast);
+
+        &:active { transform: scale(0.96); opacity: 0.9; }
 
         &.icon {
           width: 32px;
@@ -360,14 +369,17 @@ onMounted(async () => {
   .ios-week-nav {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     background: transparent;
     border: none;
-    color: #007AFF;
+    color: var(--ios-blue);
     font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    &:hover { background: var(--bg-hover); }
   }
 
   .ios-week-days {
@@ -378,36 +390,38 @@ onMounted(async () => {
     .ios-day-col {
       text-align: center;
       padding: 6px 8px;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       cursor: pointer;
       min-width: 40px;
+      transition: background var(--transition-fast);
 
       .ios-day-name {
-        font-size: 12px;
-        color: #8E8E93;
+        font-size: var(--font-size-caption);
+        color: var(--text-tertiary);
         display: block;
         margin-bottom: 2px;
+        font-weight: 500;
       }
 
       .ios-day-num {
-        font-size: 16px;
+        font-size: var(--font-size-callout);
         font-weight: 500;
-        color: #1A1A1A;
+        color: var(--text-primary);
       }
 
       &.today {
-        .ios-day-name { color: #007AFF; }
+        .ios-day-name { color: var(--ios-blue); }
       }
 
       &.selected {
-        background: #007AFF;
+        background: var(--ios-blue);
 
         .ios-day-name, .ios-day-num {
           color: #fff;
         }
 
         .ios-selected-indicator {
-          display: none; // 已选中时不需要额外指示
+          display: none;
         }
       }
     }
@@ -428,48 +442,57 @@ onMounted(async () => {
   margin-bottom: 12px;
 
   .ios-date-text {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1A1A1A;
+    font-size: var(--font-size-callout);
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
 
   .ios-task-count {
-    font-size: 14px;
-    color: #007AFF;
+    font-size: var(--font-size-sub);
+    color: var(--ios-blue);
+    font-weight: 500;
   }
 }
 
 // 任务分组
 .ios-task-groups {
   .ios-task-group {
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 
     .ios-group-label {
-      font-size: 14px;
-      color: #8E8E93;
+      font-size: var(--font-size-footnote);
+      color: var(--text-tertiary);
       margin-bottom: 6px;
       display: block;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 0 8px;
     }
 
     .ios-card {
-      background: #fff;
-      border-radius: 12px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
       overflow: hidden;
+      box-shadow: var(--shadow-xs);
 
       .ios-task-row {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 14px 16px;
+        padding: 12px 16px;
+        min-height: 44px;
         cursor: pointer;
+        transition: background var(--transition-fast);
 
         &:active {
-          background: #F2F2F7;
+          background: var(--bg-pressed);
         }
 
         &.completed {
           .ios-task-name {
-            color: #8E8E93;
+            color: var(--text-tertiary);
             text-decoration: line-through;
           }
         }
@@ -482,16 +505,17 @@ onMounted(async () => {
 
         .ios-task-main {
           flex: 1;
+          min-width: 0;
 
           .ios-task-name {
-            font-size: 16px;
-            color: #1A1A1A;
+            font-size: var(--font-size-callout);
+            color: var(--text-primary);
             display: block;
           }
 
           .ios-task-meta {
-            font-size: 13px;
-            color: #8E8E93;
+            font-size: var(--font-size-footnote);
+            color: var(--text-tertiary);
             display: block;
             margin-top: 2px;
           }
@@ -503,8 +527,8 @@ onMounted(async () => {
       }
 
       .ios-divider {
-        height: 1px;
-        background: #E5E5EA;
+        height: 0.5px;
+        background: var(--separator);
         margin: 0 16px;
       }
     }
@@ -522,29 +546,36 @@ onMounted(async () => {
   }
 
   .ios-empty-text {
-    font-size: 16px;
-    color: #8E8E93;
+    font-size: var(--font-size-callout);
+    color: var(--text-tertiary);
     display: block;
     margin-bottom: 20px;
   }
 
   .ios-add-btn {
     padding: 12px 24px;
-    border-radius: 10px;
-    background: #007AFF;
+    min-height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--ios-blue);
     color: #fff;
-    font-size: 16px;
-    font-weight: 500;
+    font-size: var(--font-size-callout);
+    font-weight: 600;
     border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.28);
+    transition: transform var(--spring), opacity var(--transition-fast);
+
+    &:active { transform: scale(0.97); opacity: 0.9; }
   }
 }
 
 // 进度卡片
 .ios-progress-card {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
   padding: 16px;
   margin-top: 16px;
+  box-shadow: var(--shadow-xs);
 
   .ios-progress-header {
     display: flex;
@@ -552,25 +583,28 @@ onMounted(async () => {
     margin-bottom: 12px;
 
     .ios-progress-title {
-      font-size: 16px;
-      font-weight: 500;
-      color: #1A1A1A;
+      font-size: var(--font-size-callout);
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .ios-progress-count {
-      font-size: 14px;
-      color: #007AFF;
+      font-size: var(--font-size-sub);
+      color: var(--ios-blue);
+      font-family: var(--font-mono);
+      font-weight: 600;
     }
   }
 
   .ios-progress-bar {
     height: 8px;
-    background: #E5E5EA;
+    background: var(--bg-fill-quaternary);
     border-radius: 4px;
+    overflow: hidden;
 
     .ios-progress-fill {
       height: 100%;
-      background: #007AFF;
+      background: var(--ios-blue);
       border-radius: 4px;
       transition: width 0.3s;
     }
@@ -581,9 +615,11 @@ onMounted(async () => {
 .ios-bottom-nav {
   display: flex;
   justify-content: space-around;
-  background: #fff;
-  border-top: 1px solid #E5E5EA;
-  padding: 8px 0 20px; // 底部留安全区域
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border-top: 0.5px solid var(--separator);
+  padding: 8px 0 calc(8px + var(--safe-bottom));
   position: sticky;
   bottom: 0;
 
@@ -591,20 +627,24 @@ onMounted(async () => {
     text-align: center;
     cursor: pointer;
     padding: 4px 12px;
+    transition: transform var(--spring);
+
+    &:active { transform: scale(0.94); }
 
     .ios-nav-icon {
       font-size: 24px;
       margin-bottom: 2px;
+      color: var(--text-tertiary);
     }
 
     span:last-child {
       font-size: 10px;
-      color: #8E8E93;
+      color: var(--text-tertiary);
     }
 
     &.active {
-      .ios-nav-icon { color: #007AFF; }
-      span:last-child { color: #007AFF; font-weight: 500; }
+      .ios-nav-icon { color: var(--ios-blue); }
+      span:last-child { color: var(--ios-blue); font-weight: 600; }
     }
   }
 }
@@ -615,7 +655,7 @@ onMounted(async () => {
     padding: 10px 12px;
 
     .ios-header-top .ios-month {
-      font-size: 18px;
+      font-size: var(--font-size-title3);
     }
 
     .ios-week-strip .ios-week-days .ios-day-col {
@@ -625,10 +665,6 @@ onMounted(async () => {
 
   .ios-content {
     padding: 12px;
-  }
-
-  .ios-bottom-nav {
-    padding-bottom: 24px; // iPhone 底部安全区域
   }
 }
 </style>

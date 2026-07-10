@@ -29,32 +29,44 @@ function toggle() {
 </template>
 
 <style scoped lang="scss">
-// iOS 风格 AI 聊天浮动按钮
+// iOS FAB
 .chat-fab {
   position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom, 20px));
+  bottom: calc(80px + var(--safe-bottom));
   right: 20px;
   width: 56px;
   height: 56px;
-  border-radius: 28px;
-  background: #007AFF;
-  color: white;
+  border-radius: 50%;
+  background: var(--ios-blue);
+  color: #fff;
   font-size: 26px;
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.32), 0 2px 6px rgba(0, 122, 255, 0.18);
   z-index: 2400;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: transform var(--spring), background var(--transition-normal), box-shadow var(--transition-normal);
 
-  &:active {
-    transform: scale(0.95);
-  }
+  &:hover { transform: scale(1.05); }
+  &:active { transform: scale(0.94); }
 
   &.open {
-    background: #E5E5EA;
-    color: #1A1A1A;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+    border: 0.5px solid var(--separator);
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-fab {
+    bottom: calc(24px + var(--safe-bottom));
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
   }
 }
 </style>

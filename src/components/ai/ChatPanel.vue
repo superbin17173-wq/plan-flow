@@ -353,14 +353,14 @@ function cancelDelete() {
   width: 380px;
   height: 560px;
   max-height: calc(100vh - 120px);
-  background: var(--bg-secondary);
-  border-radius: 16px;
-  box-shadow: var(--shadow-lg);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   z-index: 2500;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 0.5px solid var(--separator);
 }
 
 .chat-header {
@@ -368,8 +368,10 @@ function cancelDelete() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  border-bottom: 0.5px solid var(--separator);
+  background: var(--material-regular);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
 }
 
 .chat-title {
@@ -377,32 +379,31 @@ function cancelDelete() {
   align-items: center;
   gap: 10px;
 
-  .chat-avatar {
-    font-size: 24px;
-  }
+  .chat-avatar { font-size: 22px; }
   .name {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: var(--font-size-sub);
+    font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
   }
   .sub {
-    font-size: 11px;
+    font-size: var(--font-size-caption2);
     color: var(--text-tertiary);
   }
 }
 
-.chat-actions {
-  display: flex;
-  gap: 4px;
-}
+.chat-actions { display: flex; gap: 4px; }
 
 .icon-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-tertiary);
   font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
 
   &:hover {
     background: var(--bg-hover);
@@ -416,22 +417,20 @@ function cancelDelete() {
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  background: var(--bg-card);
 }
 
 .welcome {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   line-height: 1.6;
 
   ul {
     margin: 8px 0 0 0;
     padding-left: 20px;
     color: var(--text-tertiary);
-
-    li {
-      margin-bottom: 4px;
-    }
+    li { margin-bottom: 4px; }
   }
 }
 
@@ -446,9 +445,10 @@ function cancelDelete() {
   align-items: flex-end;
 
   .msg-bubble {
-    background: var(--color-work);
-    color: white;
-    border-radius: 12px 12px 2px 12px;
+    background: var(--ios-blue);
+    color: #fff;
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 1px 2px rgba(0, 122, 255, 0.16);
   }
 }
 
@@ -456,9 +456,9 @@ function cancelDelete() {
   align-self: flex-start;
 
   .msg-bubble {
-    background: var(--bg-primary);
+    background: var(--bg-fill-quaternary);
     color: var(--text-primary);
-    border-radius: 12px 12px 12px 2px;
+    border-radius: 18px 18px 18px 4px;
   }
 }
 
@@ -467,10 +467,11 @@ function cancelDelete() {
 
   .msg-bubble {
     background: transparent;
-    border: 1px dashed var(--border-color);
+    border: 1px dashed var(--separator);
     color: var(--text-tertiary);
-    font-size: 12px;
+    font-size: var(--font-size-caption);
     padding: 4px 8px;
+    border-radius: var(--radius-sm);
   }
 }
 
@@ -478,15 +479,16 @@ function cancelDelete() {
   align-self: center;
 
   .msg-bubble {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    font-size: 12px;
+    background: rgba(255, 59, 48, 0.14);
+    color: var(--ios-red);
+    font-size: var(--font-size-caption);
+    border-radius: var(--radius-sm);
   }
 }
 
 .msg-bubble {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 8px 14px;
+  font-size: var(--font-size-footnote);
   line-height: 1.5;
   word-wrap: break-word;
   white-space: pre-wrap;
@@ -495,7 +497,7 @@ function cancelDelete() {
 .msg-image {
   max-width: 220px;
   max-height: 220px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: block;
 }
 
@@ -504,14 +506,12 @@ function cancelDelete() {
   margin-top: 6px;
 }
 
-.msg-text {
-  display: block;
-}
+.msg-text { display: block; }
 
 .msg-time {
   font-size: 10px;
   color: var(--text-tertiary);
-  margin-top: 2px;
+  margin-top: 3px;
   padding: 0 4px;
 }
 
@@ -526,41 +526,31 @@ function cancelDelete() {
     background: var(--text-tertiary);
     animation: typing-bounce 1.4s infinite ease-in-out;
 
-    &:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-    &:nth-child(3) {
-      animation-delay: 0.3s;
-    }
+    &:nth-child(2) { animation-delay: 0.15s; }
+    &:nth-child(3) { animation-delay: 0.3s; }
   }
 }
 
 @keyframes typing-bounce {
-  0%, 60%, 100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  30% {
-    transform: translateY(-4px);
-    opacity: 1;
-  }
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
 }
 
 .error-hint {
   padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-radius: 8px;
-  font-size: 12px;
+  background: rgba(255, 59, 48, 0.14);
+  color: var(--ios-red);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
 }
 
 .chat-input {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  padding: 10px 12px calc(10px + var(--safe-bottom));
+  border-top: 0.5px solid var(--separator);
+  background: var(--bg-elevated);
 }
 
 .input-row {
@@ -570,23 +560,23 @@ function cancelDelete() {
 
   textarea {
     flex: 1;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 8px 10px;
-    background: var(--bg-secondary);
+    border: 0.5px solid transparent;
+    border-radius: var(--radius-md);
+    padding: 9px 12px;
+    background: var(--bg-fill-quaternary);
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     font-family: inherit;
     resize: none;
 
+    &::placeholder { color: var(--text-tertiary); }
     &:focus {
       outline: none;
-      border-color: var(--color-work);
+      background: var(--bg-card);
+      border-color: var(--ios-blue);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.14);
     }
-
-    &:disabled {
-      opacity: 0.6;
-    }
+    &:disabled { opacity: 0.6; }
   }
 }
 
@@ -595,9 +585,9 @@ function cancelDelete() {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background: var(--bg-secondary);
-  border: 1px dashed var(--color-work);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px dashed var(--ios-blue);
+  border-radius: var(--radius-md);
   position: relative;
 }
 
@@ -605,7 +595,7 @@ function cancelDelete() {
   width: 56px;
   height: 56px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 
@@ -617,12 +607,12 @@ function cancelDelete() {
   gap: 2px;
 
   .pt-title {
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     font-weight: 600;
-    color: var(--color-work);
+    color: var(--ios-blue);
   }
   .pt-hint {
-    font-size: 11px;
+    font-size: var(--font-size-caption2);
     color: var(--text-tertiary);
     line-height: 1.4;
   }
@@ -635,55 +625,58 @@ function cancelDelete() {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--bg-primary);
+  background: var(--bg-fill-quaternary);
   color: var(--text-secondary);
   font-size: 14px;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  &:hover { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  &:hover { background: rgba(255, 59, 48, 0.14); color: var(--ios-red); }
 }
 
 .send-btn {
-  padding: 8px 16px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--color-work);
-  color: white;
-  font-size: 13px;
+  padding: 8px 18px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--ios-blue);
+  color: #fff;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--spring), filter var(--transition-fast);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.24);
 
-  &:hover:not(:disabled) {
-    filter: brightness(1.1);
-  }
-
+  &:hover:not(:disabled) { filter: brightness(1.06); }
+  &:active:not(:disabled) { transform: scale(0.96); }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    box-shadow: none;
   }
 }
 
 .icon-input-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--bg-secondary);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--bg-fill-quaternary);
   color: var(--text-secondary);
   font-size: 16px;
+  border: none;
+  cursor: pointer;
 
-  &:hover:not(:disabled) {
-    background: var(--bg-hover);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  &:hover:not(:disabled) { background: var(--bg-hover); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .confirm-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -692,22 +685,24 @@ function cancelDelete() {
 }
 
 .confirm-box {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 20px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
   width: 100%;
   max-width: 300px;
+  box-shadow: var(--shadow-lg);
 
   h4 {
-    margin: 0 0 12px 0;
-    font-size: 15px;
+    margin: 0 0 10px 0;
+    font-size: var(--font-size-callout);
     color: var(--text-primary);
+    font-weight: 700;
   }
 
   p {
-    font-size: 13px;
+    font-size: var(--font-size-footnote);
     color: var(--text-secondary);
-    margin: 0 0 16px 0;
+    margin: 0 0 14px 0;
     line-height: 1.5;
   }
 }
@@ -718,47 +713,43 @@ function cancelDelete() {
   justify-content: flex-end;
 
   .btn {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
+    padding: 7px 16px;
+    min-height: 32px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-footnote);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
 
     &.cancel {
-      background: var(--bg-primary);
-      color: var(--text-secondary);
+      background: var(--bg-fill-quaternary);
+      color: var(--text-primary);
     }
     &.danger {
-      background: #ef4444;
-      color: white;
+      background: var(--ios-red);
+      color: #fff;
     }
   }
 }
 
-.chat-slide-enter-active,
-.chat-slide-leave-active {
-  transition: all 0.25s ease;
+.chat-slide-enter-active, .chat-slide-leave-active {
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s;
 }
-.chat-slide-enter-from,
-.chat-slide-leave-to {
+.chat-slide-enter-from, .chat-slide-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(24px) scale(0.96);
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 @media (max-width: 640px) {
   .chat-panel {
     right: 10px;
     left: 10px;
     width: auto;
-    bottom: 80px;
-    height: calc(100vh - 100px);
+    bottom: 84px;
+    height: calc(100vh - 110px);
   }
 }
 </style>

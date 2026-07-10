@@ -1,0 +1,77 @@
+- generic [ref=e28]:
+  - banner [ref=e29]:
+    - generic [ref=e30]:
+      - heading "PlanFlow" [level=1] [ref=e31]
+      - generic [ref=e32]:
+        - button "上一页" [ref=e33] [cursor=pointer]: ‹
+        - button "今天" [ref=e34] [cursor=pointer]
+        - button "下一页" [ref=e35] [cursor=pointer]: ›
+      - generic [ref=e36]: 2026年07月10日
+    - generic [ref=e38]:
+      - button "年" [ref=e39] [cursor=pointer]
+      - button "月" [ref=e40] [cursor=pointer]
+      - button "周" [ref=e41] [cursor=pointer]
+      - button "日" [active] [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - button "+" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: +
+      - button "🔍" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]: 🔍
+      - button "📥" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 📥
+      - button "📊" [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 📊
+      - button "⚙️" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: ⚙️
+      - button "☀️" [ref=e54] [cursor=pointer]:
+        - generic [ref=e55]: ☀️
+  - main [ref=e56]:
+    - generic [ref=e398]:
+      - generic [ref=e399]:
+        - generic [ref=e400]:
+          - button "←" [ref=e401] [cursor=pointer]:
+            - generic [ref=e402]: ←
+          - button "‹" [ref=e403] [cursor=pointer]:
+            - generic [ref=e404]: ‹
+          - button "今" [ref=e405] [cursor=pointer]
+          - button "›" [ref=e406] [cursor=pointer]:
+            - generic [ref=e407]: ›
+        - generic [ref=e408]:
+          - generic [ref=e409]: 2026年07月10日
+          - generic [ref=e410]: 今天
+        - button "+ 新建任务" [ref=e411] [cursor=pointer]
+      - generic [ref=e413]:
+        - generic [ref=e414]:
+          - img [ref=e415]
+          - generic [ref=e420]:
+            - generic [ref=e421]: 16小时
+            - generic [ref=e422]: 休息时间
+        - generic [ref=e423]:
+          - generic [ref=e426]: 睡眠 8小时
+          - generic [ref=e429]: 任务 0分钟
+          - generic [ref=e432]: 休息 16小时
+      - generic [ref=e434]:
+        - generic [ref=e435]: 00:00
+        - generic [ref=e436]: 01:00
+        - generic [ref=e437]: 02:00
+        - generic [ref=e438]: 03:00
+        - generic [ref=e439]: 04:00
+        - generic [ref=e440]: 05:00
+        - generic [ref=e441]: 06:00
+        - generic [ref=e442]: 07:00
+        - generic [ref=e443]: 08:00
+        - generic [ref=e444]: 09:00
+        - generic [ref=e445]: 10:00
+        - generic [ref=e446]: 11:00
+        - generic [ref=e447]: 12:00
+        - generic [ref=e448]: 13:00
+        - generic [ref=e449]: 14:00
+        - generic [ref=e450]: 15:00
+        - generic [ref=e451]: 16:00
+        - generic [ref=e452]: 17:00
+        - generic [ref=e453]: 18:00
+        - generic [ref=e454]: 19:00
+        - generic [ref=e455]: 20:00
+        - generic [ref=e456]: 21:00
+        - generic [ref=e457]: 22:00
+        - generic [ref=e458]: 23:00

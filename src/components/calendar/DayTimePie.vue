@@ -63,9 +63,9 @@ const segments = computed(() => {
   const rest = (restMinutes.value / 1440) * circumference
 
   return [
-    { type: 'sleep', length: sleep, offset: 0, color: '#5856D6', minutes: sleepMinutes.value },
-    { type: 'task', length: task, offset: -sleep, color: '#007AFF', minutes: taskMinutes.value },
-    { type: 'rest', length: rest, offset: -(sleep + task), color: '#34C759', minutes: restMinutes.value },
+    { type: 'sleep', length: sleep, offset: 0, minutes: sleepMinutes.value },
+    { type: 'task', length: task, offset: -sleep, minutes: taskMinutes.value },
+    { type: 'rest', length: rest, offset: -(sleep + task), minutes: restMinutes.value },
   ]
 })
 </script>
@@ -75,19 +75,18 @@ const segments = computed(() => {
     <div class="pie-wrapper">
       <svg viewBox="0 0 100 100" class="pie-chart">
         <!-- 背景圆环 -->
-        <circle cx="50" cy="50" :r="r" fill="none" stroke="#E5E5EA" :stroke-width="strokeWidth" />
+        <circle cx="50" cy="50" :r="r" fill="none" class="ring-bg" :stroke-width="strokeWidth" />
         <!-- 各扇区 -->
         <circle
           v-for="seg in segments"
           :key="seg.type"
           cx="50" cy="50" :r="r"
           fill="none"
-          :stroke="seg.color"
+          :class="['ring-segment', `seg-${seg.type}`]"
           :stroke-width="strokeWidth"
           :stroke-dasharray="`${seg.length} ${circumference - seg.length}`"
           :stroke-dashoffset="seg.offset"
           stroke-linecap="butt"
-          class="ring-segment"
         />
       </svg>
       <div class="center-info">
@@ -136,8 +135,16 @@ const segments = computed(() => {
   transform: rotate(-90deg);
 }
 
+.ring-bg {
+  stroke: var(--separator-opaque);
+}
+
 .ring-segment {
   transition: stroke-dasharray 0.3s ease, stroke-dashoffset 0.3s ease;
+
+  &.seg-sleep { stroke: var(--ios-indigo); }
+  &.seg-task  { stroke: var(--ios-blue); }
+  &.seg-rest  { stroke: var(--ios-green); }
 }
 
 .center-info {
@@ -151,14 +158,14 @@ const segments = computed(() => {
 
 .center-value {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary, #1A1A1A);
+  font-weight: 700;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
 .center-label {
   font-size: 9px;
-  color: var(--text-secondary, #8E8E93);
+  color: var(--text-tertiary);
   margin-top: 1px;
 }
 
@@ -179,20 +186,20 @@ const segments = computed(() => {
   height: 8px;
   border-radius: 2px;
 
-  &.sleep { background: #5856D6; }
-  &.task { background: #007AFF; }
-  &.rest { background: #34C759; }
+  &.sleep { background: var(--ios-indigo); }
+  &.task  { background: var(--ios-blue); }
+  &.rest  { background: var(--ios-green); }
 }
 
 .legend-text {
-  font-size: 12px;
-  color: var(--text-secondary, #8E8E93);
+  font-size: var(--font-size-caption);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .legend-sub {
   font-size: 10px;
-  color: var(--text-tertiary, #C7C7CC);
+  color: var(--text-tertiary);
   padding-left: 14px;
   margin-top: -2px;
 }

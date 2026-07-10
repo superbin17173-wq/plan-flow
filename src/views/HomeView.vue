@@ -58,12 +58,12 @@ function openProject(route: string, status: string) {
 </template>
 
 <style lang="scss" scoped>
-// iOS 风格首页
+// iOS 首页
 .home-view {
   min-height: 100vh;
-  padding: 48px 24px;
-  background: #F2F2F7;
-  color: #1A1A1A;
+  padding: calc(56px + var(--safe-top)) 24px 40px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -72,94 +72,90 @@ function openProject(route: string, status: string) {
 .hero {
   width: 100%;
   max-width: 960px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .hero-title {
-  font-size: 40px;
+  font-size: var(--font-size-largetitle);
   font-weight: 700;
-  margin: 0 0 8px;
-  letter-spacing: -0.02em;
-  color: #1A1A1A;
+  margin: 0 0 6px;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
 }
 
 .hero-subtitle {
-  font-size: 15px;
-  color: #8E8E93;
+  font-size: var(--font-size-sub);
+  color: var(--text-tertiary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .projects-grid {
   width: 100%;
   max-width: 960px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
 }
 
 .project-card {
-  --accent: #007AFF;
+  --accent: var(--ios-blue);
   position: relative;
   display: flex;
   align-items: flex-start;
   gap: 16px;
   padding: 20px;
-  background: #FFFFFF;
+  background: var(--bg-card);
   border: none;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--spring), box-shadow var(--transition-normal);
   font-family: inherit;
-  color: #1A1A1A;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
 
   &.featured {
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8FCFD 100%);
-    border: 2px solid var(--accent);
-    box-shadow: 0 4px 16px rgba(129, 201, 216, 0.25);
-    padding: 24px;
+    padding: 22px;
+    background: var(--bg-card);
+    box-shadow: 0 6px 20px rgba(0, 122, 255, 0.14), var(--shadow-sm);
 
     .card-icon {
-      background: linear-gradient(135deg, var(--accent) 0%, #A5D6E2 100%);
-      color: white;
+      background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, white) 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 32%, transparent);
     }
 
-    .card-title {
-      color: #1A1A1A;
-      font-size: 18px;
-    }
+    .card-title { font-size: var(--font-size-title3); }
+  }
+
+  &:hover:not(.disabled):not(.placeholder) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
   }
 
   &:active:not(.disabled):not(.placeholder) {
     transform: scale(0.98);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xs);
   }
 
-  &.disabled,
-  &.placeholder {
+  &.disabled, &.placeholder {
     cursor: default;
     opacity: 0.55;
   }
 }
 
-.card-action {
-  margin-top: 12px;
-  font-size: 14px;
-  color: var(--accent);
-  font-weight: 500;
-}
-
 .card-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: #F2F2F7;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--bg-fill-quaternary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 26px;
   flex-shrink: 0;
+  transition: transform var(--spring);
 }
 
 .card-body {
@@ -172,16 +168,19 @@ function openProject(route: string, status: string) {
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .card-title {
-  font-size: 17px;
+  font-size: var(--font-size-body);
   font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }
 
 .card-desc {
-  font-size: 14px;
-  color: #8E8E93;
+  font-size: var(--font-size-sub);
+  color: var(--text-tertiary);
   margin: 0 0 10px;
   line-height: 1.5;
 }
@@ -193,45 +192,56 @@ function openProject(route: string, status: string) {
 }
 
 .tag {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: #E5E5EA;
-  color: #007AFF;
+  font-size: var(--font-size-caption);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(0, 122, 255, 0.10);
+  color: var(--ios-blue);
+  font-weight: 500;
 }
+.dark .tag { background: rgba(10, 132, 255, 0.20); }
 
 .badge {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  font-size: var(--font-size-caption2);
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
 
-  &.badge-active { background: #D4EDDA; color: #155724; font-weight: 500; }
-  &.badge-wip { background: #FFF3CD; color: #856404; }
-  &.badge-planned { background: #E5E5EA; color: #8E8E93; }
+  &.badge-active {
+    background: rgba(52, 199, 89, 0.16);
+    color: var(--ios-green);
+  }
+  &.badge-wip {
+    background: rgba(255, 149, 0, 0.16);
+    color: var(--ios-orange);
+  }
+  &.badge-planned {
+    background: var(--bg-fill-quaternary);
+    color: var(--text-tertiary);
+  }
 }
 
 .card-action {
   margin-top: 12px;
-  font-size: 14px;
+  font-size: var(--font-size-sub);
   color: var(--accent);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.card-arrow {
-  display: none;
-}
+.card-arrow { display: none; }
 
 .footer {
   margin-top: auto;
   padding-top: 48px;
-  font-size: 13px;
-  color: #8E8E93;
+  font-size: var(--font-size-footnote);
+  color: var(--text-tertiary);
 }
 
 @media (max-width: 768px) {
-  .home-view { padding: 32px 16px; }
+  .home-view { padding: calc(32px + var(--safe-top)) 16px 32px; }
   .hero-title { font-size: 32px; }
   .projects-grid { grid-template-columns: 1fr; }
-  .project-card { padding: 16px; }
+  .project-card { padding: 18px; }
 }
 </style>
