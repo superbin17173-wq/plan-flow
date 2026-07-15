@@ -118,3 +118,26 @@ export function scheduleInitialReviewsFSRS(
 export function previewInitialReviewDates(originDate: string, count = 5): string[] {
   return scheduleInitialReviewsFSRS(originDate, count).map(x => x.date)
 }
+
+// AI 评分(1-5) → MasteryLevel 映射
+export function scoreToMastery(score: number): MasteryLevel {
+  if (score <= 2) return 'again'
+  if (score === 3) return 'hard'
+  if (score === 4) return 'good'
+  return 'easy' // score >= 5
+}
+
+// 聚合一组题目的 FSRS 状态:取最薄弱的卡片(最早 due + 最低 stability)
+// 用于更新任务级 ebbinghaus.fsrs,保证日历调度/级联逻辑不受影响
+export function aggregateQuestionFSRS(
+  questions: import('../types/study').StudyQuestion[],
+): FSRSCardState | undefined {
+  if (!questions.length) return undefined
+
+  // 按 stability 升序(最不稳定优先),stability 相同则按 due 升序(最早到期优先)
+  const sorted = [...questions].sort((a, b) => {
+    if (a.fsrs.stability !== b.fsrs.stability) return a.fsrs.stability - b.fsrs.stability
+    return a.fsrs.due.localeCompare(b.fsrs.due)
+  })
+  return { ...sorted[0].fsrs }
+}

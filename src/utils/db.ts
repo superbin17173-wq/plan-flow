@@ -1,6 +1,6 @@
 // IndexedDB 操作封装
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage, Plan, PlanTemplate } from '../types'
+import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage, Plan, PlanTemplate, KnowledgeFile, KnowledgePoint, DecisionEntry, ThinkingChallenge, BiasCheck } from '../types'
 import type { AIMemory } from '../types/memory'
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../types'
 
@@ -58,10 +58,32 @@ interface PlanFlowDB extends DBSchema {
     value: PlanTemplate
     indexes: { 'by-planId': string }
   }
+  knowledge_files: {
+    key: string
+    value: KnowledgeFile
+  }
+  knowledge_points: {
+    key: string
+    value: KnowledgePoint
+    indexes: { 'by-fileId': string; 'by-mastery': string }
+  }
+  cognitive_decisions: {
+    key: string
+    value: DecisionEntry
+    indexes: { 'by-status': string }
+  }
+  cognitive_challenges: {
+    key: string
+    value: ThinkingChallenge
+  }
+  cognitive_biases: {
+    key: string
+    value: BiasCheck
+  }
 }
 
 const DB_NAME = 'PlanFlowDB'
-const DB_VERSION = 6
+const DB_VERSION = 8
 
 let dbPromise: Promise<IDBPDatabase<PlanFlowDB>> | null = null
 
@@ -107,6 +129,20 @@ export async function getDB(): Promise<IDBPDatabase<PlanFlowDB>> {
           p.createIndex('by-status', 'status')
           const pt = db.createObjectStore('plan_templates', { keyPath: 'id' })
           pt.createIndex('by-planId', 'planId')
+        }
+
+        if (oldVersion < 7) {
+          db.createObjectStore('knowledge_files', { keyPath: 'id' })
+          const kp = db.createObjectStore('knowledge_points', { keyPath: 'id' })
+          kp.createIndex('by-fileId', 'fileId')
+          kp.createIndex('by-mastery', 'mastery')
+        }
+
+        if (oldVersion < 8) {
+          const cd = db.createObjectStore('cognitive_decisions', { keyPath: 'id' })
+          cd.createIndex('by-status', 'status')
+          db.createObjectStore('cognitive_challenges', { keyPath: 'id' })
+          db.createObjectStore('cognitive_biases', { keyPath: 'id' })
         }
       },
     })
@@ -275,7 +311,7 @@ export async function importData(data: { tasks?: Task[]; categories?: Category[]
 // 清空所有数据
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals', 'plans', 'plan_templates'], 'readwrite')
+  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals', 'plans', 'plan_templates', 'knowledge_files', 'knowledge_points', 'cognitive_decisions', 'cognitive_challenges', 'cognitive_biases'], 'readwrite')
   await tx.objectStore('tasks').clear()
   await tx.objectStore('categories').clear()
   await tx.objectStore('settings').clear()
@@ -284,6 +320,11 @@ export async function clearAllData(): Promise<void> {
   await tx.objectStore('meals').clear()
   await tx.objectStore('plans').clear()
   await tx.objectStore('plan_templates').clear()
+  await tx.objectStore('knowledge_files').clear()
+  await tx.objectStore('knowledge_points').clear()
+  await tx.objectStore('cognitive_decisions').clear()
+  await tx.objectStore('cognitive_challenges').clear()
+  await tx.objectStore('cognitive_biases').clear()
   await tx.done
 }
 
@@ -375,4 +416,102 @@ export async function putTemplate(tpl: PlanTemplate): Promise<void> {
 export async function deleteTemplateRow(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('plan_templates', id)
+}
+
+// ================== 知识库(KnowledgeFile / KnowledgePoint) ==================
+// 同样遵循 reactive proxy 去序列化惯例
+
+export async function getAllKnowledgeFiles(): Promise<KnowledgeFile[]> {
+  const db = await getDB()
+  return db.getAll('knowledge_files')
+}
+
+export async function getKnowledgeFileById(id: string): Promise<KnowledgeFile | undefined> {
+  const db = await getDB()
+  return db.get('knowledge_files', id)
+}
+
+export async function putKnowledgeFile(file: KnowledgeFile): Promise<void> {
+  const db = await getDB()
+  await db.put('knowledge_files', JSON.parse(JSON.stringify(file)))
+}
+
+export async function deleteKnowledgeFileRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('knowledge_files', id)
+}
+
+export async function getAllKnowledgePoints(): Promise<KnowledgePoint[]> {
+  const db = await getDB()
+  return db.getAll('knowledge_points')
+}
+
+export async function getKnowledgePointsByFileId(fileId: string): Promise<KnowledgePoint[]> {
+  const db = await getDB()
+  return db.getAllFromIndex('knowledge_points', 'by-fileId', fileId)
+}
+
+export async function getKnowledgePointById(id: string): Promise<KnowledgePoint | undefined> {
+  const db = await getDB()
+  return db.get('knowledge_points', id)
+}
+
+export async function putKnowledgePoint(point: KnowledgePoint): Promise<void> {
+  const db = await getDB()
+  await db.put('knowledge_points', JSON.parse(JSON.stringify(point)))
+}
+
+export async function deleteKnowledgePointRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('knowledge_points', id)
+}
+
+// ================== 认知训练(Cognitive Training) ==================
+
+// 决策日记
+export async function getAllDecisions(): Promise<DecisionEntry[]> {
+  const db = await getDB()
+  return db.getAll('cognitive_decisions')
+}
+
+export async function putDecision(decision: DecisionEntry): Promise<void> {
+  const db = await getDB()
+  await db.put('cognitive_decisions', JSON.parse(JSON.stringify(decision)))
+}
+
+export async function deleteDecisionRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('cognitive_decisions', id)
+}
+
+// 思维挑战
+export async function getAllChallenges(): Promise<ThinkingChallenge[]> {
+  const db = await getDB()
+  return db.getAll('cognitive_challenges')
+}
+
+export async function putChallenge(challenge: ThinkingChallenge): Promise<void> {
+  const db = await getDB()
+  await db.put('cognitive_challenges', JSON.parse(JSON.stringify(challenge)))
+}
+
+export async function deleteChallengeRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('cognitive_challenges', id)
+}
+
+// 认知偏差
+export async function getAllBiases(): Promise<BiasCheck[]> {
+  const db = await getDB()
+  return db.getAll('cognitive_biases')
+}
+
+export async function putBias(bias: BiasCheck): Promise<void> {
+  const db = await getDB()
+  await db.put('cognitive_biases', JSON.parse(JSON.stringify(bias)))
+}
+
+export async function deleteBiasRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('cognitive_biases', id)
 }

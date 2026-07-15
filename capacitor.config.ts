@@ -21,6 +21,8 @@ const config: CapacitorConfig = {
       autoDeletePrevious: true,
       // 装了更新的原生 APK 时清理旧 bundle
       resetWhenUpdate: true,
+      // 等待 notifyAppReady 的超时(默认 10s 太短,首次 DB 初始化可能慢)
+      appReadyTimeout: 25000,
     },
   },
 };

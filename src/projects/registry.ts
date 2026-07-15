@@ -20,4 +20,14 @@ export const projects: ProjectEntry[] = [
     status: 'active',
     tags: ['日历', '任务', 'PWA', 'Android'],
   },
+  {
+    id: 'cognitive',
+    name: '认知训练',
+    description: '决策日记 · 思维挑战 · 认知偏差自检',
+    icon: '🧠',
+    route: '/cognitive',
+    color: '#A78BFA',
+    status: 'active',
+    tags: ['认知', '决策', '思维'],
+  },
 ]

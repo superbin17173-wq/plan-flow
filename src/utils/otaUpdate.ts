@@ -28,14 +28,17 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     const remote = await res.json()
     const remoteVersion = remote.version || '0.0.0'
 
+    // 用当前运行的 bundle 版本(而非 APK 内置版本)比较,防止降级循环
+    const currentVersion = await getCurrentBundleVersion()
+
     // 只有 native 平台才走 OTA(浏览器/dev 环境不弹更新框)
-    const hasUpdate = Capacitor.isNativePlatform() && remoteVersion !== APP_VERSION
+    const hasUpdate = Capacitor.isNativePlatform() && remoteVersion !== currentVersion
 
     return {
       version: remoteVersion,
       buildTime: remote.buildTime || '',
       hasUpdate,
-      localVersion: APP_VERSION,
+      localVersion: currentVersion,
     }
   } catch {
     return { version: '', buildTime: '', hasUpdate: false, localVersion: APP_VERSION }

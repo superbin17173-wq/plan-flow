@@ -1,15 +1,45 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Capacitor } from '@capacitor/core'
 import { useSettingStore } from './stores/settingStore'
+import { useUiStore } from './stores/uiStore'
 import OtaUpdate from './components/common/OtaUpdate.vue'
 import { notifyAppReady } from './utils/otaUpdate'
 
 const settingStore = useSettingStore()
+const uiStore = useUiStore()
+const router = useRouter()
 
 onMounted(async () => {
+  // 最先调用: 告诉 Capgo 插件 WebView 已启动,防止超时回滚(不等 DB 初始化)
+  notifyAppReady()
   await settingStore.loadSettings()
-  // 通知 OTA 插件当前 bundle 启动成功,防止被自动回滚
-  await notifyAppReady()
+
+  // Android 硬件返回键处理
+  if (Capacitor.isNativePlatform()) {
+    const { App } = await import('@capacitor/app')
+    App.addListener('backButton', () => {
+      // 1. 先关闭所有浮层/弹窗
+      if (uiStore.showTaskForm) { uiStore.closeTaskForm(); return }
+      if (uiStore.showTaskCard) { uiStore.closeTaskCard(); return }
+      if (uiStore.showSearchPanel) { uiStore.toggleSearchPanel(); return }
+      if (uiStore.showStatsPanel) { uiStore.toggleStatsPanel(); return }
+      if (uiStore.showBulkDialog) { uiStore.showBulkDialog = false; return }
+      if (uiStore.showProfileDialog) { uiStore.showProfileDialog = false; return }
+      if (uiStore.showMealLog) { uiStore.showMealLog = false; return }
+      if (uiStore.showAiChat) { uiStore.closeAiChat(); return }
+
+      // 2. 不在首页 → 返回上一页
+      if (router.currentRoute.value.path !== '/') {
+        router.back()
+        return
+      }
+
+      // 3. 在首页 → 退出应用
+      App.exitApp()
+    })
+  }
 })
 </script>
 

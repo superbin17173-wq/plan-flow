@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { useTaskStore } from '../stores/taskStore'
 import { useRouter } from 'vue-router'
 import type { Task } from '../types'
-import { MASTERY_LABELS, type MasteryLevel } from '../types/study'
+import { MASTERY_LABELS, type MasteryLevel, type StudyQuestion } from '../types/study'
 
 const taskStore = useTaskStore()
 const router = useRouter()
@@ -35,6 +35,50 @@ const masteryDistribution = computed(() => {
     }
   }
   return dist
+})
+
+// 逐题掌握度分布(基于题目的最近一次评估)
+const questionMasteryDistribution = computed(() => {
+  const dist: Record<MasteryLevel, number> = { again: 0, hard: 0, good: 0, easy: 0 }
+  for (const t of allStudyTasks.value) {
+    const questions = t.study?.questions || []
+    for (const q of questions) {
+      if (q.masteryHistory.length === 0) continue
+      const lastLevel = q.masteryHistory[q.masteryHistory.length - 1].level
+      dist[lastLevel]++
+    }
+  }
+  return dist
+})
+
+// 所有有评估记录的题目(用于薄弱题目排行)
+const allAssessedQuestions = computed(() => {
+  const result: { question: StudyQuestion; subject: string; taskId: string }[] = []
+  for (const t of allStudyTasks.value) {
+    const questions = t.study?.questions || []
+    for (const q of questions) {
+      if (q.masteryHistory.length > 0) {
+        result.push({ question: q, subject: t.study?.subject || t.title, taskId: t.id })
+      }
+    }
+  }
+  return result
+})
+
+// 薄弱题目 Top 10 (按 FSRS stability 升序)
+const weakestQuestions = computed(() => {
+  return [...allAssessedQuestions.value]
+    .sort((a, b) => a.question.fsrs.stability - b.question.fsrs.stability)
+    .slice(0, 10)
+})
+
+// 总题目数
+const totalQuestions = computed(() => {
+  let count = 0
+  for (const t of allStudyTasks.value) {
+    count += (t.study?.questions || []).length
+  }
+  return count
 })
 
 // 复习热力图数据（最近 90 天）
@@ -154,6 +198,45 @@ onMounted(async () => {
           <span class="mastery-label">{{ MASTERY_LABELS[level as MasteryLevel] }}</span>
           <div class="bar-fill" :style="{ width: `${(count / Object.values(masteryDistribution).reduce((a,b) => a+b, 0) || 1) * 100}%` }"></div>
           <span class="mastery-count">{{ count }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 逐题掌握度分布(有题目时显示) -->
+    <section v-if="totalQuestions > 0" class="mastery-section">
+      <h2>逐题掌握度 ({{ totalQuestions }} 道题)</h2>
+      <div class="mastery-chart">
+        <div
+          v-for="(count, level) in questionMasteryDistribution"
+          :key="level"
+          class="mastery-bar"
+          :class="`mastery-${level}`"
+        >
+          <span class="mastery-label">{{ MASTERY_LABELS[level as MasteryLevel] }}</span>
+          <div class="bar-fill" :style="{ width: `${(count / Object.values(questionMasteryDistribution).reduce((a,b) => a+b, 0) || 1) * 100}%` }"></div>
+          <span class="mastery-count">{{ count }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 薄弱题目 Top 10 -->
+    <section v-if="weakestQuestions.length > 0" class="weakest-section">
+      <h2>🔴 最薄弱题目 Top {{ weakestQuestions.length }}</h2>
+      <div class="weakest-list">
+        <div
+          v-for="(item, i) in weakestQuestions"
+          :key="item.question.id"
+          class="weakest-item"
+        >
+          <span class="weakest-rank">{{ i + 1 }}</span>
+          <div class="weakest-content">
+            <div class="weakest-text">{{ item.question.text }}</div>
+            <div class="weakest-meta">
+              {{ item.subject }}
+              · 稳定度 {{ item.question.fsrs.stability.toFixed(1) }} 天
+              · {{ MASTERY_LABELS[item.question.masteryHistory[item.question.masteryHistory.length - 1]?.level || 'good'] }}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -379,5 +462,65 @@ onMounted(async () => {
   .heatmap-grid {
     grid-template-columns: repeat(10, 1fr);
   }
+}
+
+.weakest-section {
+  margin-bottom: 32px;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+}
+
+.weakest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weakest-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border-left: 3px solid rgba(240, 100, 100, 0.4);
+}
+
+.weakest-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(240, 100, 100, 0.15);
+  color: rgb(200, 70, 70);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.weakest-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.weakest-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weakest-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 </style>

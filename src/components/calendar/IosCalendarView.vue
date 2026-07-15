@@ -168,6 +168,8 @@ function goNav(nav: string) {
     uiStore.openAiChat()
   } else if (nav === 'settings') {
     showSettings.value = true
+  } else if (nav === 'plans') {
+    router.push('/plans')
   }
 }
 
@@ -278,6 +280,10 @@ onMounted(async () => {
       <div class="ios-nav-item" :class="{ active: activeNav === 'calendar' }" @click="goNav('calendar')">
         <div class="ios-nav-icon">📅</div>
         <span>日历</span>
+      </div>
+      <div class="ios-nav-item" :class="{ active: activeNav === 'plans' }" @click="goNav('plans')">
+        <div class="ios-nav-icon">🗂</div>
+        <span>计划</span>
       </div>
       <div class="ios-nav-item" :class="{ active: activeNav === 'stats' }" @click="goNav('stats')">
         <div class="ios-nav-icon">📊</div>

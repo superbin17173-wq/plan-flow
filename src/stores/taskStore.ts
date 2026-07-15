@@ -161,6 +161,8 @@ export const useTaskStore = defineStore('task', () => {
           subject: originTask.study.subject,
           materialText: originTask.study.materialText,
           materialFileName: originTask.study.materialFileName,
+          knowledgeRef: originTask.study.knowledgeRef,
+          questions: originTask.study.questions ? originTask.study.questions.map(q => ({ ...q })) : undefined,
           ebbinghaus: {
             enabled: true,
             studyGroupId,
@@ -268,6 +270,205 @@ export const useTaskStore = defineStore('task', () => {
       await dbUpdateTask(nextUpdated)
       tasks.value[nextIdx] = nextUpdated
     }
+  }
+
+  // ---- 逐题管理 actions ----
+
+  // 批量添加题目到学习任务
+  async function addQuestionsToStudy(
+    taskId: string,
+    items: { text: string; answer?: string }[],
+  ): Promise<void> {
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study) return
+
+    const { createInitialFSRSCard } = await import('../utils/fsrs')
+    const questions = task.study.questions ? [...task.study.questions] : []
+    const originDate = task.date
+
+    for (const item of items) {
+      if (!item.text.trim()) continue
+      questions.push({
+        id: uuidv4(),
+        text: item.text.trim(),
+        referenceAnswer: item.answer?.trim() || undefined,
+        fsrs: createInitialFSRSCard(originDate),
+        masteryHistory: [],
+      })
+    }
+
+    const updated: Task = {
+      ...task,
+      study: { ...task.study, questions },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+  }
+
+  // 删除题目
+  async function removeQuestionFromStudy(taskId: string, questionId: string): Promise<void> {
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study?.questions) return
+
+    const questions = task.study.questions.filter(q => q.id !== questionId)
+    const updated: Task = {
+      ...task,
+      study: { ...task.study, questions },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+  }
+
+  // 编辑题目文本
+  async function editQuestionText(
+    taskId: string,
+    questionId: string,
+    newText: string,
+  ): Promise<void> {
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study?.questions) return
+
+    const questions = task.study.questions.map(q =>
+      q.id === questionId ? { ...q, text: newText } : q,
+    )
+    const updated: Task = {
+      ...task,
+      study: { ...task.study, questions },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+  }
+
+  // 提交单题评估:推进该题 FSRS 卡片 + 记录 masteryHistory
+  async function submitQuestionAssessment(
+    taskId: string,
+    questionId: string,
+    mastery: import('../types/study').MasteryLevel,
+    aiReason?: string,
+  ): Promise<void> {
+    const { MASTERY_TO_QUALITY } = await import('../types/study')
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study?.questions) return
+
+    const qIdx = task.study.questions.findIndex(q => q.id === questionId)
+    if (qIdx < 0) return
+
+    const question = task.study.questions[qIdx]
+    const quality = MASTERY_TO_QUALITY[mastery]
+    const record: import('../types/study').MasteryRecord = {
+      date: task.date,
+      level: mastery,
+      quality,
+      source: aiReason ? 'ai' : 'manual',
+      aiReason,
+    }
+
+    const { advanceFSRSCard } = await import('../utils/fsrs')
+    const newFsrs = advanceFSRSCard(question.fsrs, mastery, task.date)
+
+    const questions = task.study.questions.map((q, i) =>
+      i === qIdx
+        ? { ...q, fsrs: newFsrs, masteryHistory: [...q.masteryHistory, record] }
+        : q,
+    )
+
+    const updated: Task = {
+      ...task,
+      study: { ...task.study, questions },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+  }
+
+  // 整轮问答结束:标记任务完成 + 聚合更新任务级 FSRS + 级联下一个复习任务
+  async function completeQuizReview(taskId: string): Promise<void> {
+    const idx = tasks.value.findIndex(t => t.id === taskId)
+    if (idx < 0) return
+    const task = tasks.value[idx]
+    if (!task.study?.ebbinghaus || !task.study.questions) return
+
+    // 聚合任务级 FSRS:取最薄弱的题目卡片
+    const { aggregateQuestionFSRS } = await import('../utils/fsrs')
+    const aggregatedFsrs = aggregateQuestionFSRS(task.study.questions)
+
+    // 标记完成 + 更新聚合 FSRS
+    const updated: Task = {
+      ...task,
+      isCompleted: true,
+      study: {
+        ...task.study,
+        ebbinghaus: {
+          ...task.study.ebbinghaus,
+          fsrs: aggregatedFsrs || task.study.ebbinghaus.fsrs,
+        },
+      },
+      updatedAt: Date.now(),
+    }
+    await dbUpdateTask(updated)
+    tasks.value[idx] = updated
+
+    // 级联:调整下一个未完成复习任务的日期
+    if (!aggregatedFsrs) return
+    const groupId = task.study.ebbinghaus.studyGroupId
+    const nextReview = tasks.value
+      .filter(t =>
+        t.study?.ebbinghaus?.studyGroupId === groupId &&
+        t.study?.ebbinghaus?.reviewIndex >= 1 &&
+        !t.isCompleted &&
+        t.id !== task.id,
+      )
+      .sort((a, b) => a.date.localeCompare(b.date))[0]
+
+    if (nextReview) {
+      const nextIdx = tasks.value.findIndex(t => t.id === nextReview.id)
+      const nextEb = nextReview.study!.ebbinghaus!
+      const nextUpdated: Task = {
+        ...nextReview,
+        date: aggregatedFsrs.due,
+        study: {
+          ...nextReview.study!,
+          ebbinghaus: {
+            ...nextEb,
+            fsrs: aggregatedFsrs,
+            // 透传 questions 到下一个复习任务
+            // (如果下一个复习还没有 questions,从当前任务拷贝)
+          },
+        },
+        updatedAt: Date.now(),
+      }
+      await dbUpdateTask(nextUpdated)
+      tasks.value[nextIdx] = nextUpdated
+    }
+  }
+
+  // 选择下一道需要复习的题目(overdue 优先,stability 最低优先)
+  function selectNextQuestion(
+    questions: import('../types/study').StudyQuestion[],
+    today: string,
+    maxCount = 20,
+  ): import('../types/study').StudyQuestion[] {
+    return [...questions]
+      .sort((a, b) => {
+        // overdue 的排前面
+        const aOverdue = a.fsrs.due <= today ? 0 : 1
+        const bOverdue = b.fsrs.due <= today ? 0 : 1
+        if (aOverdue !== bOverdue) return aOverdue - bOverdue
+        // 同组按 stability 升序(最不稳定优先)
+        return a.fsrs.stability - b.fsrs.stability
+      })
+      .slice(0, maxCount)
   }
 
 
@@ -432,6 +633,12 @@ export const useTaskStore = defineStore('task', () => {
     searchTasks,
     filterTasks,
     submitReviewAssessment,
+    addQuestionsToStudy,
+    removeQuestionFromStudy,
+    editQuestionText,
+    submitQuestionAssessment,
+    completeQuizReview,
+    selectNextQuestion,
     todayStats,
     weekStats,
     monthStats,

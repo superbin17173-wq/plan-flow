@@ -402,3 +402,119 @@ export function buildSystemPrompt(extra?: string): string {
   }
   return base
 }
+
+// ---- 学习问答/出题 相关 ----
+
+// 构建问答模式的 system prompt(单题评估)
+export function buildQuizSystemPrompt(
+  material: string,
+  questionText: string,
+  referenceAnswer?: string,
+): string {
+  let prompt = `你正在帮用户进行面试复习。用户正在回答以下题目：
+
+【题目】${questionText}`
+
+  if (referenceAnswer) {
+    prompt += `\n\n【参考答案】${referenceAnswer}`
+  }
+
+  if (material) {
+    prompt += `\n\n【学习材料】\n${material.slice(0, 3000)}`
+  }
+
+  prompt += `\n\n请：
+1. 根据用户的回答，评估其掌握程度
+2. 给出 1-5 分的质量评分
+3. 简要说明理由（2-3 句话）
+
+你的回复必须包含以下格式的一行（用于程序解析，不要省略或改变格式）：
+[评估] 质量: N/5, 理由: ...
+
+评分标准：
+- 5 分：回答完整准确，理解深入，有独到见解
+- 4 分：基本正确，有小遗漏
+- 3 分：大方向对，但有关键细节缺失
+- 2 分：只答出一小部分，或存在明显错误
+- 1 分：完全偏离或不会
+
+请先输出评价，最后一行输出 [评估] 行。`
+
+  return prompt
+}
+
+// 解析 AI 评估输出，提取分数和理由
+export function parseAIEvaluation(aiText: string): { score: number; reason: string } {
+  // 匹配 [评估] 质量: N/5 格式
+  const evalMatch = aiText.match(/\[评估\]\s*质量[:：]\s*(\d)\s*\/\s*5/)
+  if (evalMatch) {
+    const score = parseInt(evalMatch[1], 10)
+    // 提取理由：优先从 [评估] 行的 "理由:" 后面提取
+    const reasonMatch = aiText.match(/\[评估\][^\n]*理由[:：]\s*(.+?)(?:\n|$)/)
+    const reason = reasonMatch ? reasonMatch[1].trim() : ''
+    return { score: Math.max(1, Math.min(5, score)), reason }
+  }
+
+  // fallback: 尝试从文本中找 "N/5" 模式
+  const fallbackMatch = aiText.match(/(\d)\s*\/\s*5/)
+  if (fallbackMatch) {
+    return { score: Math.max(1, Math.min(5, parseInt(fallbackMatch[1], 10))), reason: 'AI 评估格式不完整，使用默认解析' }
+  }
+
+  // 完全无法解析，返回默认值
+  console.warn('AI 评估解析失败，fallback score=3:', aiText.slice(0, 200))
+  return { score: 3, reason: '评估解析失败，默认中等评分' }
+}
+
+// 构建从材料自动出题的 messages
+export function buildQuestionGenerationMessages(material: string): Array<{ role: 'system' | 'user'; content: string }> {
+  return [
+    {
+      role: 'system',
+      content: '你是一个面试出题专家。请根据用户提供的学习材料，提取/生成高质量的面试题目。',
+    },
+    {
+      role: 'user',
+      content: `请根据以下学习材料，提取/生成面试题目。
+
+要求：
+- 覆盖材料中的所有关键知识点
+- 题目应考察理解和应用，而非死记硬背
+- 每道题附带简洁的参考答案
+- 生成 10-20 道题目（视材料长度调整）
+
+请以 JSON 数组格式输出，不要输出其他内容：
+[
+  { "question": "题目文本", "answer": "参考答案" },
+  ...]
+
+学习材料：
+${material}`,
+    },
+  ]
+}
+
+// 解析 AI 生成的题目列表
+export function parseGeneratedQuestions(aiText: string): { question: string; answer: string }[] {
+  // 提取 JSON 数组
+  const jsonMatch = aiText.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) {
+    console.warn('AI 出题解析失败：未找到 JSON 数组')
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0])
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .filter((item: any) => item && typeof item.question === 'string' && item.question.trim())
+      .map((item: any) => ({
+        question: item.question.trim(),
+        answer: typeof item.answer === 'string' ? item.answer.trim() : '',
+      }))
+  } catch (e) {
+    console.warn('AI 出题 JSON 解析失败:', e)
+    return []
+  }
+}

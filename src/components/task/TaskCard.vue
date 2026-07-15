@@ -1,23 +1,33 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import dayjs from 'dayjs'
-import type { Task } from '../../types'
+import type { Task, KnowledgePointDraft } from '../../types'
 import { getCategoryById } from '../../types/category'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
 import { useHealthStore } from '../../stores/healthStore'
+import { useKnowledgeStore } from '../../stores/knowledgeStore'
+import { extractKnowledgePoints } from '../../utils/knowledgeExtractor'
 import { calcTaskCalories, currentWeight } from '../../utils/calorie'
 import { MASTERY_LABELS } from '../../types/study'
 import ReviewDialog from './ReviewDialog.vue'
+import ExtractDialog from '../knowledge/ExtractDialog.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
 const healthStore = useHealthStore()
+const knowledgeStore = useKnowledgeStore()
 
 // 复习评估对话框
 const showReviewDialog = ref(false)
+
+// 老路径 → 知识库 转换
+const showConvertDialog = ref(false)
+const convertDrafts = ref<KnowledgePointDraft[]>([])
+const convertError = ref('')
+const convertBusy = ref(false)
 
 // 当前任务
 const task = computed(() => {
@@ -128,6 +138,52 @@ const dateDisplay = computed(() => {
   if (d.isSame(today.add(1, 'day'), 'day')) return '明天'
   return d.format('YYYY年MM月DD日')
 })
+
+// 转换相关函数:把老路径 materialText → 知识库知识点
+const convertFileTitle = ref('')
+
+function openConvertDialog() {
+  if (!task.value?.study?.materialText) return
+  convertDrafts.value = extractKnowledgePoints(task.value.study.materialText)
+  convertFileTitle.value = task.value.study.subject || task.value.title || '从任务迁移'
+  convertError.value = ''
+  showConvertDialog.value = true
+}
+
+async function onConfirmConvert(drafts: KnowledgePointDraft[]) {
+  if (!task.value) return
+  const kept = drafts.filter(d => !d.deleted && d.question.trim())
+  if (!kept.length) {
+    convertError.value = '至少保留一条知识点'
+    return
+  }
+  convertBusy.value = true
+  try {
+    const materialText = task.value.study!.materialText || ''
+    const file = await knowledgeStore.createFile({
+      title: convertFileTitle.value,
+      sourceFileName: `从任务:${task.value.title}`,
+      content: materialText,
+    })
+    const points = await knowledgeStore.addPoints(
+      file.id,
+      kept.map(d => ({ question: d.question.trim(), answer: d.answer.trim() })),
+    )
+    // 把 task.study.knowledgeRef 指向第一条知识点,清空 materialText(保留 materialFileName 做溯源)
+    await taskStore.editTask(task.value.id, {
+      study: {
+        subject: task.value.study!.subject,
+        knowledgeRef: points[0]?.id,
+        materialFileName: task.value.study!.materialFileName,
+      },
+    })
+    showConvertDialog.value = false
+  } catch (e: any) {
+    convertError.value = e?.message || '转换失败'
+  } finally {
+    convertBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -188,6 +244,14 @@ const dateDisplay = computed(() => {
                   v-if="task.study.materialText"
                   class="study-material"
                 >{{ task.study.materialText.slice(0, 240) }}<span v-if="task.study.materialText.length > 240">…</span></div>
+                <div v-if="task.study.materialText && !task.study.knowledgeRef" class="study-actions">
+                  <button class="study-convert-btn" @click="openConvertDialog">
+                    📚 转换到知识库
+                  </button>
+                </div>
+                <div v-if="task.study.knowledgeRef" class="study-actions">
+                  <span class="study-kp-tag">📎 已关联知识点</span>
+                </div>
                 <div v-if="task.study.ebbinghaus && !task.isCompleted" class="study-actions">
                   <button class="study-review-btn" @click="showReviewDialog = true">
                     🔁 开始复习评估
@@ -262,6 +326,15 @@ const dateDisplay = computed(() => {
       </div>
     </Transition>
     <ReviewDialog v-if="task && task.study?.ebbinghaus" v-model="showReviewDialog" :task="task" />
+    <ExtractDialog
+      v-if="showConvertDialog && task"
+      :title="convertFileTitle"
+      :content="task.study?.materialText || ''"
+      :error="convertError"
+      @update:title="v => convertFileTitle = v"
+      @confirm="onConfirmConvert"
+      @cancel="showConvertDialog = false"
+    />
   </Teleport>
 </template>
 
@@ -449,6 +522,28 @@ const dateDisplay = computed(() => {
 
   &:hover { filter: brightness(1.08); }
   &:active { transform: scale(0.97); }
+}
+
+.study-convert-btn {
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--ios-blue);
+  border: 0.5px solid var(--ios-blue);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  &:hover { background: rgba(0, 122, 255, 0.08); }
+}
+
+.study-kp-tag {
+  padding: 6px 12px;
+  background: rgba(123, 196, 127, 0.14);
+  color: #4ea85a;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .study-history {

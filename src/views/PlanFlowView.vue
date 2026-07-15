@@ -117,7 +117,7 @@ const loading = computed(() => taskStore.loading || !settingStore.loaded)
 .main-content {
   flex: 1;
   padding: 16px;
-  overflow: hidden;
+  overflow-y: auto;
   background: var(--bg-primary);
 }
 

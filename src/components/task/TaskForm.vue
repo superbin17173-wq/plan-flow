@@ -12,6 +12,7 @@ import { scheduleInitialReviewsFSRS } from '../../utils/fsrs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
+import KnowledgePicker from './KnowledgePicker.vue'
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
@@ -119,6 +120,63 @@ watch(isFitness, (v) => {
 const isStudy = computed(() => formData.value.category === 'study')
 const studyData = ref<StudySession>({ subject: '', materialText: '' })
 const enableEbbinghaus = ref(false)
+
+// 关联知识点(新路径,与 materialText 互斥)
+const knowledgeRef = ref<string | undefined>(undefined)
+
+// AI 自动出题
+const isGeneratingQuestions = ref(false)
+const generatedQuestions = ref<{ question: string; answer: string }[]>([])
+const showGeneratedPreview = ref(false)
+const pendingNewQuestions = ref<{ text: string; answer?: string }[]>([])
+
+async function generateQuestionsFromAI() {
+  if (!studyData.value.materialText?.trim()) return
+  isGeneratingQuestions.value = true
+  generatedQuestions.value = []
+
+  try {
+    const { chatWithDeepSeek } = await import('../../utils/deepseek')
+    const { buildQuestionGenerationMessages, parseGeneratedQuestions } = await import('../../utils/aiTools')
+    const settings = settingStore.settings
+
+    if (!settings.aiEnabled || !settings.aiApiKey) {
+      alert('请先在设置中启用 AI 并填写 API Key')
+      return
+    }
+
+    const messages = buildQuestionGenerationMessages(studyData.value.materialText)
+    const response = await chatWithDeepSeek({
+      apiKey: settings.aiApiKey,
+      model: settings.aiModel,
+      messages,
+      temperature: 0.5,
+    })
+
+    const aiText = response.choices[0]?.message?.content || ''
+    generatedQuestions.value = parseGeneratedQuestions(aiText)
+
+    if (generatedQuestions.value.length === 0) {
+      alert('AI 未能生成题目，请重试或手动添加')
+    } else {
+      showGeneratedPreview.value = true
+    }
+  } catch (err) {
+    console.error('AI 出题失败:', err)
+    alert('AI 出题失败：' + (err instanceof Error ? err.message : String(err)))
+  } finally {
+    isGeneratingQuestions.value = false
+  }
+}
+
+function confirmGeneratedQuestions() {
+  pendingNewQuestions.value = generatedQuestions.value.map(g => ({
+    text: g.question,
+    answer: g.answer || undefined,
+  }))
+  generatedQuestions.value = []
+  showGeneratedPreview.value = false
+}
 
 // 初始复习计划预览(展示给用户看会生成哪些复习任务)
 const initialIntervalDays = [1, 2, 4, 7, 15]
@@ -234,6 +292,20 @@ watch(editingTask, (task) => {
       workout: task.workout,
     }
     workoutExercises.value = task.workout ? JSON.parse(JSON.stringify(task.workout)) : []
+    // 同步学习数据(老 materialText + 新 knowledgeRef)
+    if (task.study) {
+      studyData.value = {
+        subject: task.study.subject || '',
+        materialText: task.study.materialText,
+        materialFileName: task.study.materialFileName,
+      }
+      knowledgeRef.value = task.study.knowledgeRef
+      enableEbbinghaus.value = !!task.study.ebbinghaus?.enabled
+    } else {
+      studyData.value = { subject: '', materialText: '' }
+      knowledgeRef.value = undefined
+      enableEbbinghaus.value = false
+    }
     // 同步提醒开关状态
     if (task.remindAt !== undefined && task.remindAt !== null) {
       showReminder.value = true
@@ -254,6 +326,9 @@ watch(editingTask, (task) => {
     }
   } else {
     workoutExercises.value = []
+    studyData.value = { subject: '', materialText: '' }
+    knowledgeRef.value = undefined
+    enableEbbinghaus.value = false
     showReminder.value = false
     showRecurrence.value = false
     recurrenceType.value = 'none'
@@ -338,11 +413,12 @@ async function handleSubmit() {
 
   // 学习数据(仅学习分类)
   let studyClean: StudySession | undefined
-  if (isStudy.value && studyData.value.subject.trim()) {
+  if (isStudy.value && (studyData.value.subject.trim() || knowledgeRef.value)) {
     studyClean = {
-      subject: studyData.value.subject.trim(),
+      subject: studyData.value.subject.trim() || (knowledgeRef.value ? '知识点复习' : ''),
       materialText: studyData.value.materialText || undefined,
       materialFileName: studyData.value.materialFileName || undefined,
+      knowledgeRef: knowledgeRef.value,
     }
     // 启用艾宾浩斯 → 让 taskStore 生成 ebbinghaus 结构与后续复习任务
     if (enableEbbinghaus.value && !isEditMode.value) {
@@ -386,10 +462,19 @@ async function handleSubmit() {
   uiStore.closeTaskForm()
 
   // 再异步保存数据
+  let savedTaskId: string | undefined
   if (isEditMode.value && editingId) {
     await taskStore.editTask(editingId, submitData)
+    savedTaskId = editingId
   } else {
-    await taskStore.createTask(submitData, formData.value.date)
+    const created = await taskStore.createTask(submitData, formData.value.date)
+    savedTaskId = created.id
+  }
+
+  // 如果有 AI 生成的待添加题目,创建完成后追加到学习任务
+  if (savedTaskId && pendingNewQuestions.value.length > 0) {
+    await taskStore.addQuestionsToStudy(savedTaskId, pendingNewQuestions.value)
+    pendingNewQuestions.value = []
   }
 }
 
@@ -618,29 +703,101 @@ watch(recurrenceType, (type) => {
                 <input
                   v-model="studyData.subject"
                   class="form-input"
-                  placeholder="学习主题(如 GRE List 1 / 计算机八股文)"
+                  placeholder="学习主题(留空也可,系统会用知识点标题)"
                 />
-                <div class="study-material-row">
-                  <textarea
-                    v-model="studyData.materialText"
-                    class="form-textarea"
-                    rows="4"
-                    placeholder="粘贴学习材料(MD 或纯文本),用于后续复习和 AI 提问"
-                  ></textarea>
+
+                <!-- 新知识路径:关联知识点 -->
+                <KnowledgePicker v-model="knowledgeRef" />
+
+                <!-- 老路径:materialText(仅在编辑模式且已有 materialText 时展示,否则不再使用) -->
+                <div v-if="isEditMode && studyData.materialText" class="legacy-material">
+                  <p class="legacy-label">📎 旧版学习材料</p>
+                  <div class="study-material-row">
+                    <textarea
+                      v-model="studyData.materialText"
+                      class="form-textarea"
+                      rows="4"
+                      placeholder="粘贴学习材料(MD 或纯文本),用于后续复习和 AI 提问"
+                    ></textarea>
+                  </div>
+                  <div class="study-file-row">
+                    <label class="study-file-btn">
+                      📎 从文件读取 (.md / .txt / .pdf)
+                      <input
+                        type="file"
+                        accept=".md,.markdown,.txt,.pdf"
+                        @change="onStudyFileUpload"
+                        style="display: none"
+                      />
+                    </label>
+                    <span v-if="studyData.materialFileName" class="study-file-name">
+                      {{ studyData.materialFileName }}
+                    </span>
+                  </div>
+                  <p class="legacy-hint">💡 新任务建议改用上方「关联知识点」,老路径已停止新增。</p>
                 </div>
-                <div class="study-file-row">
-                  <label class="study-file-btn">
-                    📎 从文件读取 (.md / .txt / .pdf)
-                    <input
-                      type="file"
-                      accept=".md,.markdown,.txt,.pdf"
-                      @change="onStudyFileUpload"
-                      style="display: none"
-                    />
-                  </label>
+
+                <!-- 学习材料 + AI 出题(新建时可用) -->
+                <div v-if="!isEditMode || !studyData.materialText" class="material-ai-section">
+                  <div class="material-input-row">
+                    <textarea
+                      v-model="studyData.materialText"
+                      class="form-textarea"
+                      rows="3"
+                      placeholder="粘贴学习材料,可用 AI 自动生成面试题目 (可选)"
+                    ></textarea>
+                  </div>
+                  <div class="material-actions-row">
+                    <label class="study-file-btn small">
+                      📎 从文件读取
+                      <input
+                        type="file"
+                        accept=".md,.markdown,.txt,.pdf"
+                        @change="onStudyFileUpload"
+                        style="display: none"
+                      />
+                    </label>
+                    <button
+                      v-if="studyData.materialText?.trim()"
+                      type="button"
+                      class="ai-generate-btn"
+                      :disabled="isGeneratingQuestions"
+                      @click="generateQuestionsFromAI"
+                    >
+                      {{ isGeneratingQuestions ? '🤖 生成中...' : '🤖 AI 自动出题' }}
+                    </button>
+                  </div>
                   <span v-if="studyData.materialFileName" class="study-file-name">
-                    {{ studyData.materialFileName }}
+                    📄 {{ studyData.materialFileName }}
                   </span>
+
+                  <!-- AI 生成结果预览 -->
+                  <div v-if="showGeneratedPreview" class="generated-preview">
+                    <div class="generated-label">🤖 AI 生成了 {{ generatedQuestions.length }} 道题目（可编辑）</div>
+                    <div
+                      v-for="(g, i) in generatedQuestions"
+                      :key="i"
+                      class="generated-item-row"
+                    >
+                      <input
+                        v-model="g.question"
+                        class="generated-q-input"
+                        :placeholder="`题目 ${i + 1}`"
+                      />
+                      <button type="button" class="gen-remove" @click="generatedQuestions.splice(i, 1)">×</button>
+                    </div>
+                    <div class="generated-confirm-row">
+                      <button type="button" class="confirm-gen-btn" @click="confirmGeneratedQuestions">
+                        ✓ 确认添加 {{ generatedQuestions.length }} 道题
+                      </button>
+                      <button type="button" class="cancel-gen-btn" @click="showGeneratedPreview = false; generatedQuestions = []">
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="pendingNewQuestions.length > 0" class="pending-questions">
+                    📝 已准备 {{ pendingNewQuestions.length }} 道题目，保存任务后自动添加
+                  </div>
                 </div>
 
                 <label class="ebbinghaus-toggle">
@@ -1078,6 +1235,25 @@ watch(recurrenceType, (type) => {
   .form-input, .form-textarea { border-radius: var(--radius-sm); }
 }
 
+.legacy-material {
+  margin: 10px 0;
+  padding: 10px;
+  background: var(--bg-fill-quaternary, rgba(120, 120, 128, 0.08));
+  border: 0.5px dashed var(--separator);
+  border-radius: 10px;
+}
+.legacy-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.legacy-hint {
+  font-size: 12px;
+  color: var(--ios-blue);
+  margin: 8px 0 0;
+}
+
 .ebbinghaus-toggle {
   display: flex;
   align-items: center;
@@ -1196,5 +1372,128 @@ watch(recurrenceType, (type) => {
   color: var(--text-tertiary);
   font-size: var(--font-size-sub);
   line-height: 1.5;
+}
+
+/* ---- AI 出题相关 ---- */
+.material-ai-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.study-file-btn.small {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.ai-generate-btn {
+  padding: 6px 14px;
+  background: rgba(108, 155, 235, 0.12);
+  border: 1px solid rgba(108, 155, 235, 0.25);
+  border-radius: 6px;
+  font-size: 13px;
+  color: rgb(80, 130, 220);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { background: rgba(108, 155, 235, 0.22); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.generated-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.generated-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.generated-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.generated-q-input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+
+  &:focus { outline: none; border-color: rgb(108, 155, 235); }
+}
+
+.gen-remove {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(240, 100, 100, 0.1);
+  color: rgb(200, 70, 70);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { background: rgba(240, 100, 100, 0.2); }
+}
+
+.generated-confirm-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.confirm-gen-btn {
+  padding: 6px 14px;
+  background: rgba(80, 180, 100, 0.15);
+  color: rgb(60, 150, 80);
+  border: 1px solid rgba(80, 180, 100, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover { background: rgba(80, 180, 100, 0.25); }
+}
+
+.cancel-gen-btn {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover { background: var(--bg-hover); }
+}
+
+.pending-questions {
+  padding: 8px 12px;
+  background: rgba(80, 180, 100, 0.08);
+  border: 1px solid rgba(80, 180, 100, 0.2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: rgb(60, 150, 80);
 }
 </style>

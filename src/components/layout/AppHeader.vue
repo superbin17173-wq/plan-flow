@@ -62,6 +62,7 @@ function handleMenuCommand(cmd: string) {
   switch (cmd) {
     case 'bulk': uiStore.openBulkDialog(); break
     case 'plans': router.push('/plans'); break
+    case 'knowledge': router.push('/knowledge'); break
     case 'stats': toggleStats(); break
     case 'settings': showSettings.value = true; break
     case 'theme': settingStore.toggleTheme(); break
@@ -69,6 +70,7 @@ function handleMenuCommand(cmd: string) {
 }
 
 function goPlans() { router.push('/plans') }
+function goKnowledge() { router.push('/knowledge') }
 </script>
 
 <template>
@@ -103,6 +105,9 @@ function goPlans() { router.push('/plans') }
       <button class="action-btn desktop-only" @click="goPlans" title="计划与模板">
         <span>🗂</span>
       </button>
+      <button class="action-btn desktop-only" @click="goKnowledge" title="知识库">
+        <span>📚</span>
+      </button>
       <button class="action-btn desktop-only" @click="toggleStats" title="统计">
         <span>📊</span>
       </button>
@@ -122,6 +127,7 @@ function goPlans() { router.push('/plans') }
           <ElDropdownMenu>
             <ElDropdownItem command="bulk">📥 批量 / 导入</ElDropdownItem>
             <ElDropdownItem command="plans">🗂 计划与模板</ElDropdownItem>
+            <ElDropdownItem command="knowledge">📚 知识库</ElDropdownItem>
             <ElDropdownItem command="stats">📊 统计</ElDropdownItem>
             <ElDropdownItem command="settings">⚙️ 设置</ElDropdownItem>
             <ElDropdownItem command="theme">{{ themeIcon }} 主题切换</ElDropdownItem>

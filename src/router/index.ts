@@ -32,6 +32,30 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '计划与模板 · PlanFlow' },
   },
   {
+    path: '/knowledge',
+    name: 'knowledge',
+    component: () => import('../views/KnowledgeView.vue'),
+    meta: { title: '知识库 · PlanFlow' },
+  },
+  {
+    path: '/knowledge/:fileId',
+    name: 'knowledge-file',
+    component: () => import('../views/KnowledgeFileView.vue'),
+    meta: { title: '知识点 · PlanFlow' },
+  },
+  {
+    path: '/knowledge-quiz/:fileId',
+    name: 'knowledge-quiz',
+    component: () => import('../views/KnowledgeQuizView.vue'),
+    meta: { title: '知识问答 · PlanFlow' },
+  },
+  {
+    path: '/cognitive',
+    name: 'cognitive',
+    component: () => import('../views/CognitiveTrainingView.vue'),
+    meta: { title: '认知训练 · PlanFlow' },
+  },
+  {
     path: '/ui-preview',
     name: 'ui-preview',
     component: () => import('../views/UIStylePreview.vue'),

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { checkForUpdate, downloadUpdate, applyBundle, getBundleList, type UpdateInfo } from '../../utils/otaUpdate'
+import { checkForUpdate, downloadUpdate, applyBundle, getBundleList, notifyAppReady, type UpdateInfo } from '../../utils/otaUpdate'
 import { Capacitor } from '@capacitor/core'
 import type { BundleInfo } from '@capgo/capacitor-updater'
 
@@ -12,6 +12,7 @@ const updateDone = ref(false)
 const updateError = ref('')
 const showSuccessToast = ref(false)
 const successVersion = ref('')
+const applying = ref(false)
 
 // 下载好的 bundle,点"立即启用"时用
 const downloadedBundle = ref<BundleInfo | null>(null)
@@ -61,10 +62,8 @@ async function doUpdate() {
 
 // 立即启用: 切换 WebView 到新 bundle
 async function reloadNow() {
-  if (!downloadedBundle.value) {
-    log('reloadNow: downloadedBundle 为空,退出')
-    return
-  }
+  if (applying.value || !downloadedBundle.value) return
+  applying.value = true
   try {
     log(`reloadNow: 开始,bundle=${JSON.stringify(downloadedBundle.value)}`)
     log(`native list(before): ${await getBundleList()}`)
@@ -80,6 +79,8 @@ async function reloadNow() {
     log(`❌ applyBundle 抛错: ${msg}`)
     showDiag.value = true
     updateError.value = err instanceof Error ? err.message : '应用失败'
+  } finally {
+    applying.value = false
   }
 }
 
