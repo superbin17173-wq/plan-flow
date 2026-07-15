@@ -1,6 +1,6 @@
 // IndexedDB 操作封装
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage, Plan, PlanTemplate, KnowledgeFile, KnowledgePoint, DecisionEntry, ThinkingChallenge, BiasCheck } from '../types'
+import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage, Plan, PlanTemplate, KnowledgeFile, KnowledgePoint, DecisionEntry, ThinkingChallenge, BiasCheck, FlashcardDeck, FlashcardCard, FlashcardSession } from '../types'
 import type { AIMemory } from '../types/memory'
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../types'
 
@@ -80,10 +80,25 @@ interface PlanFlowDB extends DBSchema {
     key: string
     value: BiasCheck
   }
+  flashcard_decks: {
+    key: string
+    value: FlashcardDeck
+    indexes: { 'by-createdAt': number }
+  }
+  flashcard_cards: {
+    key: string
+    value: FlashcardCard
+    indexes: { 'by-deckId': string; 'by-due': string }
+  }
+  flashcard_sessions: {
+    key: string
+    value: FlashcardSession
+    indexes: { 'by-date': string }
+  }
 }
 
 const DB_NAME = 'PlanFlowDB'
-const DB_VERSION = 8
+const DB_VERSION = 9
 
 let dbPromise: Promise<IDBPDatabase<PlanFlowDB>> | null = null
 
@@ -143,6 +158,16 @@ export async function getDB(): Promise<IDBPDatabase<PlanFlowDB>> {
           cd.createIndex('by-status', 'status')
           db.createObjectStore('cognitive_challenges', { keyPath: 'id' })
           db.createObjectStore('cognitive_biases', { keyPath: 'id' })
+        }
+
+        if (oldVersion < 9) {
+          const fd = db.createObjectStore('flashcard_decks', { keyPath: 'id' })
+          fd.createIndex('by-createdAt', 'createdAt')
+          const fc = db.createObjectStore('flashcard_cards', { keyPath: 'id' })
+          fc.createIndex('by-deckId', 'deckId')
+          fc.createIndex('by-due', 'fsrs.due')
+          const fs = db.createObjectStore('flashcard_sessions', { keyPath: 'id' })
+          fs.createIndex('by-date', 'date')
         }
       },
     })
@@ -311,7 +336,7 @@ export async function importData(data: { tasks?: Task[]; categories?: Category[]
 // 清空所有数据
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals', 'plans', 'plan_templates', 'knowledge_files', 'knowledge_points', 'cognitive_decisions', 'cognitive_challenges', 'cognitive_biases'], 'readwrite')
+  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals', 'plans', 'plan_templates', 'knowledge_files', 'knowledge_points', 'cognitive_decisions', 'cognitive_challenges', 'cognitive_biases', 'flashcard_decks', 'flashcard_cards', 'flashcard_sessions'], 'readwrite')
   await tx.objectStore('tasks').clear()
   await tx.objectStore('categories').clear()
   await tx.objectStore('settings').clear()
@@ -325,6 +350,9 @@ export async function clearAllData(): Promise<void> {
   await tx.objectStore('cognitive_decisions').clear()
   await tx.objectStore('cognitive_challenges').clear()
   await tx.objectStore('cognitive_biases').clear()
+  await tx.objectStore('flashcard_decks').clear()
+  await tx.objectStore('flashcard_cards').clear()
+  await tx.objectStore('flashcard_sessions').clear()
   await tx.done
 }
 
@@ -514,4 +542,59 @@ export async function putBias(bias: BiasCheck): Promise<void> {
 export async function deleteBiasRow(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('cognitive_biases', id)
+}
+
+// ================== 记忆卡牌(Flashcard) ==================
+
+// 牌组
+export async function getAllFlashcardDecks(): Promise<FlashcardDeck[]> {
+  const db = await getDB()
+  return db.getAll('flashcard_decks')
+}
+
+export async function putFlashcardDeck(deck: FlashcardDeck): Promise<void> {
+  const db = await getDB()
+  await db.put('flashcard_decks', JSON.parse(JSON.stringify(deck)))
+}
+
+export async function deleteFlashcardDeckRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('flashcard_decks', id)
+}
+
+// 卡牌
+export async function getAllFlashcardCards(): Promise<FlashcardCard[]> {
+  const db = await getDB()
+  return db.getAll('flashcard_cards')
+}
+
+export async function getFlashcardCardsByDeckId(deckId: string): Promise<FlashcardCard[]> {
+  const db = await getDB()
+  return db.getAllFromIndex('flashcard_cards', 'by-deckId', deckId)
+}
+
+export async function putFlashcardCard(card: FlashcardCard): Promise<void> {
+  const db = await getDB()
+  await db.put('flashcard_cards', JSON.parse(JSON.stringify(card)))
+}
+
+export async function deleteFlashcardCardRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('flashcard_cards', id)
+}
+
+// 练习记录
+export async function getAllFlashcardSessions(): Promise<FlashcardSession[]> {
+  const db = await getDB()
+  return db.getAll('flashcard_sessions')
+}
+
+export async function getFlashcardSessionsByDate(date: string): Promise<FlashcardSession[]> {
+  const db = await getDB()
+  return db.getAllFromIndex('flashcard_sessions', 'by-date', date)
+}
+
+export async function putFlashcardSession(session: FlashcardSession): Promise<void> {
+  const db = await getDB()
+  await db.put('flashcard_sessions', JSON.parse(JSON.stringify(session)))
 }

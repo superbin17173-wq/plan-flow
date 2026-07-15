@@ -62,6 +62,24 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'UI风格预览 · PlanFlow' },
   },
   {
+    path: '/flashcards',
+    name: 'flashcards',
+    component: () => import('../views/FlashcardsView.vue'),
+    meta: { title: '记忆卡牌 · PlanFlow' },
+  },
+  {
+    path: '/flashcards/:deckId',
+    name: 'flashcard-deck',
+    component: () => import('../views/FlashcardDeckView.vue'),
+    meta: { title: '牌组详情 · PlanFlow' },
+  },
+  {
+    path: '/flashcards/practice/:deckId',
+    name: 'flashcard-practice',
+    component: () => import('../views/FlashcardPracticeView.vue'),
+    meta: { title: '练习 · PlanFlow' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },

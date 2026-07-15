@@ -30,4 +30,14 @@ export const projects: ProjectEntry[] = [
     status: 'active',
     tags: ['认知', '决策', '思维'],
   },
+  {
+    id: 'flashcards',
+    name: '记忆卡牌',
+    description: '主动回忆 · 间隔重复 · 面试备战',
+    icon: '🎴',
+    route: '/flashcards',
+    color: '#FF6B6B',
+    status: 'active',
+    tags: ['记忆', '面试', '闪卡'],
+  },
 ]
