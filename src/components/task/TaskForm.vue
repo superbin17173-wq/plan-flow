@@ -8,6 +8,7 @@ import { DEFAULT_CATEGORIES, getCategoryById } from '../../types/category'
 import { MUSCLE_GROUPS, EXERCISES_BY_GROUP, WEIGHT_OPTIONS, REP_OPTIONS, DEFAULT_WEIGHT_BY_GROUP, DEFAULT_REPS_BY_GROUP, type WorkoutExercise } from '../../types/health'
 import type { StudySession } from '../../types/study'
 import { extractTextFromPDF, isPDFFile } from '../../utils/pdfParser'
+import { scheduleInitialReviewsFSRS } from '../../utils/fsrs'
 import { useUiStore } from '../../stores/uiStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useSettingStore } from '../../stores/settingStore'
@@ -121,6 +122,18 @@ const enableEbbinghaus = ref(false)
 
 // 初始复习计划预览(展示给用户看会生成哪些复习任务)
 const initialIntervalDays = [1, 2, 4, 7, 15]
+// FSRS 预览:根据当前选择的日期,预演首学后 5 条复习任务的实际间隔天数
+const fsrsPreviewDays = computed<number[]>(() => {
+  const originDate = formData.value.date
+  if (!originDate) return initialIntervalDays
+  try {
+    const schedule = scheduleInitialReviewsFSRS(originDate, 5)
+    const origin = dayjs(originDate)
+    return schedule.map(s => Math.max(1, dayjs(s.date).diff(origin, 'day')))
+  } catch {
+    return initialIntervalDays
+  }
+})
 
 // 上传 MD / 纯文本 / PDF 文件
 async function onStudyFileUpload(e: Event) {
@@ -637,17 +650,17 @@ watch(recurrenceType, (type) => {
 
                 <div v-if="enableEbbinghaus" class="ebbinghaus-preview">
                   <div class="ebbinghaus-tip">
-                    保存后将在以下日期自动生成 {{ initialIntervalDays.length }} 次复习任务:
+                    保存后将按 FSRS 记忆模型自动生成 {{ fsrsPreviewDays.length }} 次复习任务:
                   </div>
                   <div class="ebbinghaus-schedule">
                     <span
-                      v-for="d in initialIntervalDays"
+                      v-for="d in fsrsPreviewDays"
                       :key="d"
                       class="ebbinghaus-day"
                     >{{ d }} 天后</span>
                   </div>
                   <div class="ebbinghaus-hint">
-                    复习时选择"重来/困难/良好/简单",AI/SM-2 算法会智能调整后续间隔
+                    复习时选择"重来/困难/良好/简单",FSRS 会根据你的记忆表现动态调整后续间隔
                   </div>
                 </div>
               </div>

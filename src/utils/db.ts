@@ -1,6 +1,6 @@
 // IndexedDB 操作封装
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage } from '../types'
+import type { Task, Category, Settings, WorkoutEntry, MeasurementEntry, MealEntry, AIMessage, Plan, PlanTemplate } from '../types'
 import type { AIMemory } from '../types/memory'
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../types'
 
@@ -48,10 +48,20 @@ interface PlanFlowDB extends DBSchema {
     value: AIMemory
     indexes: { 'by-session': string; 'by-importance': number; 'by-createdAt': number }
   }
+  plans: {
+    key: string
+    value: Plan
+    indexes: { 'by-status': string }
+  }
+  plan_templates: {
+    key: string
+    value: PlanTemplate
+    indexes: { 'by-planId': string }
+  }
 }
 
 const DB_NAME = 'PlanFlowDB'
-const DB_VERSION = 5
+const DB_VERSION = 6
 
 let dbPromise: Promise<IDBPDatabase<PlanFlowDB>> | null = null
 
@@ -90,6 +100,13 @@ export async function getDB(): Promise<IDBPDatabase<PlanFlowDB>> {
           mem.createIndex('by-session', 'sessionId')
           mem.createIndex('by-importance', 'importance')
           mem.createIndex('by-createdAt', 'createdAt')
+        }
+
+        if (oldVersion < 6) {
+          const p = db.createObjectStore('plans', { keyPath: 'id' })
+          p.createIndex('by-status', 'status')
+          const pt = db.createObjectStore('plan_templates', { keyPath: 'id' })
+          pt.createIndex('by-planId', 'planId')
         }
       },
     })
@@ -258,13 +275,15 @@ export async function importData(data: { tasks?: Task[]; categories?: Category[]
 // 清空所有数据
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals'], 'readwrite')
+  const tx = db.transaction(['tasks', 'categories', 'settings', 'workouts', 'measurements', 'meals', 'plans', 'plan_templates'], 'readwrite')
   await tx.objectStore('tasks').clear()
   await tx.objectStore('categories').clear()
   await tx.objectStore('settings').clear()
   await tx.objectStore('workouts').clear()
   await tx.objectStore('measurements').clear()
   await tx.objectStore('meals').clear()
+  await tx.objectStore('plans').clear()
+  await tx.objectStore('plan_templates').clear()
   await tx.done
 }
 
@@ -308,4 +327,52 @@ export async function putMeal(m: MealEntry): Promise<void> {
 export async function deleteMeal(id: string): Promise<void> {
   const db = await getDB()
   await db.delete('meals', id)
+}
+
+// ================== 计划(Plan) / 模板(PlanTemplate) ==================
+// 落库前一律 JSON.parse(JSON.stringify(...)) 去除 Vue reactive proxy(见 addTask 惯例)
+
+export async function getAllPlans(): Promise<Plan[]> {
+  const db = await getDB()
+  return db.getAll('plans')
+}
+
+export async function getPlanById(id: string): Promise<Plan | undefined> {
+  const db = await getDB()
+  return db.get('plans', id)
+}
+
+export async function putPlan(plan: Plan): Promise<void> {
+  const db = await getDB()
+  await db.put('plans', JSON.parse(JSON.stringify(plan)))
+}
+
+export async function deletePlanRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('plans', id)
+}
+
+export async function getAllTemplates(): Promise<PlanTemplate[]> {
+  const db = await getDB()
+  return db.getAll('plan_templates')
+}
+
+export async function getTemplatesByPlanId(planId: string): Promise<PlanTemplate[]> {
+  const db = await getDB()
+  return db.getAllFromIndex('plan_templates', 'by-planId', planId)
+}
+
+export async function getTemplateById(id: string): Promise<PlanTemplate | undefined> {
+  const db = await getDB()
+  return db.get('plan_templates', id)
+}
+
+export async function putTemplate(tpl: PlanTemplate): Promise<void> {
+  const db = await getDB()
+  await db.put('plan_templates', JSON.parse(JSON.stringify(tpl)))
+}
+
+export async function deleteTemplateRow(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('plan_templates', id)
 }

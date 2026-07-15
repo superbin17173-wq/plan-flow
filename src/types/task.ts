@@ -22,6 +22,9 @@ export interface Task {
   remindAt?: number // 提前多少分钟提醒(仅 timed 生效)
   workout?: WorkoutExercise[] // 健身分类专用:动作/组数
   study?: StudySession // 学习分类专用:主题/材料/艾宾浩斯
+  // ---- 计划/模板 关联(可选,由 planExpander 写入,用于幂等去重 + AI 汇总过滤) ----
+  planId?: string
+  templateItemId?: string
   createdAt: number
   updatedAt: number
 }

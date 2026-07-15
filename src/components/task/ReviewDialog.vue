@@ -30,6 +30,7 @@ const reviewIndex = computed(() => props.task.study?.ebbinghaus?.reviewIndex ?? 
 const subject = computed(() => props.task.study?.subject ?? props.task.title)
 const material = computed(() => props.task.study?.materialText ?? '')
 const sm2State = computed(() => props.task.study?.ebbinghaus?.sm2)
+const fsrsState = computed(() => props.task.study?.ebbinghaus?.fsrs)
 const history = computed(() => props.task.study?.ebbinghaus?.masteryHistory ?? [])
 const aiSessionId = computed(() => props.task.study?.ebbinghaus?.aiSessionId)
 
@@ -119,7 +120,20 @@ function close() {
             </div>
           </div>
 
-          <div v-if="sm2State" class="sm2-section">
+          <div v-if="fsrsState" class="sm2-section">
+            <div class="section-label">🧠 FSRS 记忆状态</div>
+            <div class="sm2-stats">
+              <span>稳定度: {{ fsrsState.stability.toFixed(1) }} 天</span>
+              <span>·</span>
+              <span>难度: {{ fsrsState.difficulty.toFixed(1) }} / 10</span>
+              <span>·</span>
+              <span>已复习: {{ fsrsState.reps }} 次</span>
+              <span>·</span>
+              <span>下次: {{ fsrsState.due }}</span>
+            </div>
+          </div>
+
+          <div v-else-if="sm2State" class="sm2-section">
             <div class="section-label">🎯 SM-2 状态</div>
             <div class="sm2-stats">
               <span>难度因子: {{ sm2State.easinessFactor }}</span>

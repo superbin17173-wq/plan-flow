@@ -1,4 +1,5 @@
 // 学习任务专用类型定义
+import type { FSRSCardState } from '../utils/fsrs'
 
 // 掌握度评级 (Anki 风格 4 档)
 export type MasteryLevel = 'again' | 'hard' | 'good' | 'easy'
@@ -40,13 +41,15 @@ export interface StudySession {
   materialText?: string          // 学习材料原文 (MD / 纯文本)
   materialFileName?: string      // 原始文件名(可选)
 
-  // ---- Ebbinghaus / SM-2 相关(可选) ----
+  // ---- Ebbinghaus 相关(可选) ----
+  // 2026-07 起首推 FSRS(ts-fsrs), 老数据里的 sm2 字段保留,兼容存量任务
   ebbinghaus?: {
     enabled: true
     studyGroupId: string         // 同一学习计划的所有复习任务共享此 ID
     originTaskId: string         // 首次学习的任务 ID (复习任务反向指向它)
     reviewIndex: number          // 第几次复习 (0=首学, 1=第1次复习...)
-    sm2: SM2State
+    fsrs?: FSRSCardState         // 新版:FSRS 卡片状态(首推)
+    sm2?: SM2State               // 老版:SM-2 状态(仅存量数据仍在用)
     masteryHistory: MasteryRecord[]
     aiSessionId?: string         // 关联的 AI 会话 ID (阶段2/3使用)
   }

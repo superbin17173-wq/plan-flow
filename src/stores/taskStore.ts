@@ -114,17 +114,16 @@ export const useTaskStore = defineStore('task', () => {
     return task
   }
 
-  // 根据首学任务生成后续复习任务链
+  // 根据首学任务生成后续复习任务链(FSRS 版)
   async function generateEbbinghausReviews(originTask: Task): Promise<void> {
     if (!originTask.study) return
-    const { initialReviewSchedule, addDays: _ } = await import('../utils/sm2')
-    const { defaultSM2State } = await import('../types/study')
+    const { scheduleInitialReviewsFSRS, createInitialFSRSCard } = await import('../utils/fsrs')
 
     const studyGroupId = uuidv4()
     const aiSessionId = uuidv4() // 所有复习任务共享同一个 AI 会话
-    const reviewDates = initialReviewSchedule(originTask.date, 5)
+    const schedule = scheduleInitialReviewsFSRS(originTask.date, 5)
 
-    // 更新原任务的 study.ebbinghaus 字段
+    // 更新原任务的 study.ebbinghaus 字段(首学:reviewIndex=0,还没被评估过)
     const originIndex = tasks.value.findIndex(t => t.id === originTask.id)
     if (originIndex >= 0) {
       const study = { ...originTask.study }
@@ -134,7 +133,7 @@ export const useTaskStore = defineStore('task', () => {
         studyGroupId,
         originTaskId: originTask.id,
         reviewIndex: 0,
-        sm2: defaultSM2State(),
+        fsrs: createInitialFSRSCard(originTask.date),
         masteryHistory: [],
         aiSessionId,
       }
@@ -143,15 +142,16 @@ export const useTaskStore = defineStore('task', () => {
       tasks.value[originIndex] = updated
     }
 
-    // 生成后续复习任务
-    for (let i = 0; i < reviewDates.length; i++) {
+    // 生成后续复习任务(每条都带有 FSRS 预演到该次的卡片快照)
+    for (let i = 0; i < schedule.length; i++) {
+      const step = schedule[i]
       const reviewTask: Task = {
         id: uuidv4(),
         title: `🔁 复习:${originTask.study.subject}`,
         description: `第 ${i + 1} 次复习(首学于 ${originTask.date})`,
         category: 'study',
         priority: 'medium',
-        date: reviewDates[i],
+        date: step.date,
         startTime: originTask.startTime,
         endTime: originTask.endTime,
         durationMinutes: originTask.durationMinutes,
@@ -166,7 +166,7 @@ export const useTaskStore = defineStore('task', () => {
             studyGroupId,
             originTaskId: originTask.id,
             reviewIndex: i + 1,
-            sm2: defaultSM2State(),
+            fsrs: step.card,
             masteryHistory: [],
             aiSessionId,
           },
@@ -179,13 +179,12 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  // 提交一次复习评估:更新 SM-2 状态,调整下一次复习日期
+  // 提交一次复习评估:根据卡片状态决定用 FSRS 还是老 SM-2 更新
   async function submitReviewAssessment(
     taskId: string,
     mastery: import('../types/study').MasteryLevel,
     aiReason?: string
   ): Promise<void> {
-    const { sm2, addDays } = await import('../utils/sm2')
     const { MASTERY_TO_QUALITY } = await import('../types/study')
 
     const idx = tasks.value.findIndex(t => t.id === taskId)
@@ -194,13 +193,28 @@ export const useTaskStore = defineStore('task', () => {
     if (!task.study?.ebbinghaus) return
 
     const quality = MASTERY_TO_QUALITY[mastery]
-    const newSm2 = sm2(task.study.ebbinghaus.sm2, quality)
     const record: import('../types/study').MasteryRecord = {
       date: task.date,
       level: mastery,
       quality,
       source: aiReason ? 'ai' : 'manual',
       aiReason,
+    }
+
+    const eb = task.study.ebbinghaus
+    let newFsrs = eb.fsrs
+    let newSm2 = eb.sm2
+    let nextDate: string | null = null
+
+    // 优先 FSRS 路径(新数据);老数据(仅有 sm2)走 SM-2 路径
+    if (eb.fsrs) {
+      const { advanceFSRSCard } = await import('../utils/fsrs')
+      newFsrs = advanceFSRSCard(eb.fsrs, mastery, task.date)
+      nextDate = newFsrs.due
+    } else if (eb.sm2) {
+      const { sm2, addDays } = await import('../utils/sm2')
+      newSm2 = sm2(eb.sm2, quality)
+      nextDate = addDays(task.date, newSm2.interval || 1)
     }
 
     // 更新当前复习任务
@@ -210,9 +224,10 @@ export const useTaskStore = defineStore('task', () => {
       study: {
         ...task.study,
         ebbinghaus: {
-          ...task.study.ebbinghaus,
+          ...eb,
+          fsrs: newFsrs,
           sm2: newSm2,
-          masteryHistory: [...task.study.ebbinghaus.masteryHistory, record],
+          masteryHistory: [...eb.masteryHistory, record],
         },
       },
       updatedAt: Date.now(),
@@ -221,26 +236,31 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value[idx] = updated
 
     // 调整下一次未完成的复习任务日期
-    const groupId = task.study.ebbinghaus.studyGroupId
+    // 注意:只考虑真正的复习任务(reviewIndex >= 1),不能把首学任务当成"下一次复习"
+    if (!nextDate) return
+    const groupId = eb.studyGroupId
     const nextReview = tasks.value
       .filter(t =>
         t.study?.ebbinghaus?.studyGroupId === groupId &&
+        t.study?.ebbinghaus?.reviewIndex >= 1 &&
         !t.isCompleted &&
         t.id !== task.id
       )
       .sort((a, b) => a.date.localeCompare(b.date))[0]
 
     if (nextReview) {
-      const newDate = addDays(task.date, newSm2.interval || 1)
       const nextIdx = tasks.value.findIndex(t => t.id === nextReview.id)
+      const nextEb = nextReview.study!.ebbinghaus!
       const nextUpdated: Task = {
         ...nextReview,
-        date: newDate,
+        date: nextDate,
         study: {
           ...nextReview.study!,
           ebbinghaus: {
-            ...nextReview.study!.ebbinghaus!,
-            sm2: newSm2,
+            ...nextEb,
+            // 沿用最新一次评估算出的卡片作为下一条复习的当前状态,便于后续继续 FSRS 推进
+            fsrs: newFsrs || nextEb.fsrs,
+            sm2: newSm2 || nextEb.sm2,
           },
         },
         updatedAt: Date.now(),

@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '学习仪表盘 · PlanFlow' },
   },
   {
+    path: '/plans',
+    name: 'plans',
+    component: () => import('../views/PlansView.vue'),
+    meta: { title: '计划与模板 · PlanFlow' },
+  },
+  {
     path: '/ui-preview',
     name: 'ui-preview',
     component: () => import('../views/UIStylePreview.vue'),

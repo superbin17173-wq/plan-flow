@@ -68,8 +68,8 @@ const completedReviews = computed(() =>
 )
 const averageEF = computed(() => {
   const efs = allStudyTasks.value
-    .filter(t => t.study?.ebbinghaus?.sm2)
-    .map(t => t.study!.ebbinghaus!.sm2.easinessFactor)
+    .filter(t => t.study?.ebbinghaus?.sm2?.easinessFactor != null)
+    .map(t => t.study!.ebbinghaus!.sm2!.easinessFactor)
   if (efs.length === 0) return 2.5
   return efs.reduce((a, b) => a + b, 0) / efs.length
 })

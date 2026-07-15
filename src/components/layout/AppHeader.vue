@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElDropdown, ElDropdownMenu, ElDropdownItem } from 'element-plus'
 import { useUiStore } from '../../stores/uiStore'
@@ -13,6 +14,7 @@ import SettingsPanel from '../common/SettingsPanel.vue'
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
 const settingStore = useSettingStore()
+const router = useRouter()
 
 const showSettings = ref(false)
 
@@ -59,11 +61,14 @@ function toggleStats() { uiStore.toggleStatsPanel() }
 function handleMenuCommand(cmd: string) {
   switch (cmd) {
     case 'bulk': uiStore.openBulkDialog(); break
+    case 'plans': router.push('/plans'); break
     case 'stats': toggleStats(); break
     case 'settings': showSettings.value = true; break
     case 'theme': settingStore.toggleTheme(); break
   }
 }
+
+function goPlans() { router.push('/plans') }
 </script>
 
 <template>
@@ -95,6 +100,9 @@ function handleMenuCommand(cmd: string) {
       <button class="action-btn desktop-only" @click="uiStore.openBulkDialog()" title="批量/导入">
         <span>📥</span>
       </button>
+      <button class="action-btn desktop-only" @click="goPlans" title="计划与模板">
+        <span>🗂</span>
+      </button>
       <button class="action-btn desktop-only" @click="toggleStats" title="统计">
         <span>📊</span>
       </button>
@@ -113,6 +121,7 @@ function handleMenuCommand(cmd: string) {
         <template #dropdown>
           <ElDropdownMenu>
             <ElDropdownItem command="bulk">📥 批量 / 导入</ElDropdownItem>
+            <ElDropdownItem command="plans">🗂 计划与模板</ElDropdownItem>
             <ElDropdownItem command="stats">📊 统计</ElDropdownItem>
             <ElDropdownItem command="settings">⚙️ 设置</ElDropdownItem>
             <ElDropdownItem command="theme">{{ themeIcon }} 主题切换</ElDropdownItem>
