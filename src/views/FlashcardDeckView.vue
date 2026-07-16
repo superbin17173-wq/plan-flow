@@ -67,7 +67,7 @@ function startWeakest() {
   <div class="deck-view">
     <!-- Header -->
     <div class="view-header">
-      <button class="back-btn" @click="router.push('/flashcards')">‹ 返回</button>
+      <button class="back-btn" @click="router.back()">‹ 返回</button>
       <h1 class="view-title">{{ deck?.icon }} {{ deck?.name }}</h1>
       <button class="action-btn" @click="showMenu = !showMenu">⋯</button>
     </div>

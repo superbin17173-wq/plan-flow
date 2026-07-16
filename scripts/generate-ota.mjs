@@ -35,8 +35,11 @@ async function main() {
   const version = pkg.version || '1.0.0'
   const buildTime = new Date().toISOString()
 
-  // 生成 version.json
+  // 生成 version.json（含可选的 changelog 字段）
   const versionData = { version, buildTime }
+  if (pkg.changelog && typeof pkg.changelog === 'string') {
+    versionData.changelog = pkg.changelog
+  }
   writeFileSync(VERSION_FILE, JSON.stringify(versionData, null, 2))
   console.log(`✓ version.json: ${version} (${buildTime})`)
 

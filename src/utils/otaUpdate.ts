@@ -13,6 +13,7 @@ const DIST_ZIP_PATH = '/dist.zip'
 export interface UpdateInfo {
   version: string
   buildTime: string
+  changelog?: string
   hasUpdate: boolean
   localVersion: string
 }
@@ -37,6 +38,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     return {
       version: remoteVersion,
       buildTime: remote.buildTime || '',
+      changelog: remote.changelog || undefined,
       hasUpdate,
       localVersion: currentVersion,
     }

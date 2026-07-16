@@ -26,7 +26,7 @@ async function onCreate(data: { name: string; description: string; icon: string;
   <div class="flashcards-view">
     <!-- Header -->
     <div class="view-header">
-      <button class="back-btn" @click="router.push('/')">‹ 返回</button>
+      <button class="back-btn" @click="router.back()">‹ 返回</button>
       <h1 class="view-title">🎴 记忆卡牌</h1>
       <button class="action-btn" @click="showCreate = true">+ 新建</button>
     </div>

@@ -18,6 +18,9 @@ const router = useRouter()
 
 const showSettings = ref(false)
 
+// 是否在首页
+const isHomeRoute = computed(() => router.currentRoute.value.path === '/')
+
 // 当前视图标题
 const viewTitle = computed(() => {
   const d = dayjs(uiStore.selectedDate)
@@ -76,6 +79,10 @@ function goKnowledge() { router.push('/knowledge') }
 <template>
   <header class="app-header">
     <div class="header-left">
+      <!-- 移动端返回按钮（仅非首页显示） -->
+      <button v-if="!isHomeRoute" class="back-btn mobile-only" @click="router.back()" aria-label="返回">
+        ‹
+      </button>
       <h1 class="app-title">PlanFlow</h1>
       <div class="nav-group">
         <button class="nav-btn" @click="goPrev" aria-label="上一页">‹</button>
@@ -248,6 +255,26 @@ function goKnowledge() { router.push('/knowledge') }
 .mobile-only { display: none; }
 .desktop-only { display: flex; }
 
+.back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ios-blue);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), transform var(--spring);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  &:hover { background: var(--bg-hover); }
+  &:active { transform: scale(0.9); background: var(--bg-pressed); }
+}
+
 @media (max-width: 768px) {
   .app-header {
     padding: 8px 12px;
@@ -280,6 +307,12 @@ function goKnowledge() { router.push('/knowledge') }
     width: 32px;
     height: 32px;
     font-size: 15px;
+  }
+
+  .back-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 22px;
   }
 
   .mobile-only { display: flex; }

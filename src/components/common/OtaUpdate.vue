@@ -137,6 +137,10 @@ defineExpose({
             <p v-if="updateInfo.buildTime" class="build-time">
               构建时间: {{ new Date(updateInfo.buildTime).toLocaleString('zh-CN') }}
             </p>
+            <div v-if="updateInfo.changelog" class="changelog-section">
+              <h4>更新内容:</h4>
+              <pre class="changelog-text">{{ updateInfo.changelog }}</pre>
+            </div>
           </div>
 
           <div v-if="downloading" class="ota-progress">
@@ -237,6 +241,31 @@ h3 {
     font-size: var(--font-size-caption);
     color: var(--text-tertiary);
     margin-top: 10px;
+  }
+
+  .changelog-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--separator-opaque);
+    text-align: left;
+
+    h4 {
+      font-size: var(--font-size-sub);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 8px;
+    }
+
+    .changelog-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      padding: 0;
+      font-family: inherit;
+    }
   }
 }
 
