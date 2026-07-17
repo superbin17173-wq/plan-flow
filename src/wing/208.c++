@@ -1,34 +1,25 @@
-class MinStack {
-public: 
-    int v[30010]={0};
-    int left=0,right=0;
-    MinStack() {
+class Solution {
+public:
+    bool wordBreak(string s, vector<string>& wordDict) {
+        vector<string> str;
+        string  tmp;
+        
+        for(int i=0;i<s.size();i++){
+            tmp+=s[i];
+            str.push_back(tmp);
+        }
+        tmp="";
+        for(int i=0;i<str.size();i++){
+            tmp=s[i];
+            for(int j=0;j<wordDict.size();j++){
+                int len=wordDict[j];
+                string un_tmp=str[i-len];
+                string xx=un_tmp+wordBreak[j];
+                if(tmp==xx) str[i]=1;
+            }
+        }
 
-    }
-    
-    void push(int value) {
-        v[right]=value;
-        right++;
-    }
-    
-    void pop() {
-        right--;
-    }
-    
-    int top() {
-       return v[right-1];
-    }
-    
-    int getMin() {
-        return v[left];
+        if(str[s.size()-1]==1) return true;
+        else return false;      
     }
 };
-
-/**
- * Your Minstack_v object will be instantiated and called as such:
- * Minstack_v* obj = new Minstack_v();
- * obj->push(value);
- * obj->pop();
- * int param_3 = obj->top();
- * int param_4 = obj->getMin();
- */

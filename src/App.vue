@@ -6,6 +6,7 @@ import { useSettingStore } from './stores/settingStore'
 import { useUiStore } from './stores/uiStore'
 import OtaUpdate from './components/common/OtaUpdate.vue'
 import { notifyAppReady } from './utils/otaUpdate'
+import { initBaguQuestions } from './utils/baguInitializer'
 
 const settingStore = useSettingStore()
 const uiStore = useUiStore()
@@ -15,6 +16,9 @@ onMounted(async () => {
   // 最先调用: 告诉 Capgo 插件 WebView 已启动,防止超时回滚(不等 DB 初始化)
   notifyAppReady()
   await settingStore.loadSettings()
+
+  // 首次启动时导入八股文题库到知识库(幂等,不阻塞 UI)
+  initBaguQuestions()
 
   // Android 硬件返回键处理
   if (Capacitor.isNativePlatform()) {

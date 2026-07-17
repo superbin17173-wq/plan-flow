@@ -1,7 +1,7 @@
 {
   "name": "planflow",
   "private": true,
-  "version": "0.0.14",
+  "version": "0.0.15",
   "changelog": "🎴 新增「记忆卡牌」模块\n- 主动回忆 + FSRS 间隔重复\n- 三池进展可视化（未掌握/在学/掌握）\n- 庆祝动画 + 触觉反馈 + 连续打卡\n- 本周趋势折线图\n\n🔧 优化\n- 移动端新增返回按钮，支持侧滑返回\n- OTA 更新弹窗显示更新内容",
   "type": "module",
   "scripts": {
